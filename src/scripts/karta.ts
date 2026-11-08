@@ -51,6 +51,10 @@ function umfaerben(stil: StyleSpecification): StyleSpecification {
         else if (sl === 'transportation') l.paint['line-color'] = l.id.includes('casing') ? F.strasseRand : F.strasse;
         else if (sl === 'boundary') l.paint['line-color'] = F.kamen;
       } else if (l.type === 'symbol' && l.layout?.['text-field']) {
+        // Landesname „Bosna i Hercegovina“ ausblenden – dort stehen die osmanischen Sancak-Namen
+        if (l.id.startsWith('label_country') && Array.isArray(l.filter)) {
+          l.filter = ['all', l.filter, ['!=', ['get', 'iso_a2'], 'BA']];
+        }
         // Ortsnamen in lokaler Schreibweise statt Englisch/Kyrillisch
         if (['place', 'water_name', 'mountain_peak'].includes(sl)) {
           l.layout['text-field'] = ['coalesce', ['get', 'name:bs'], ['get', 'name:hr'], ['get', 'name:sr-Latn'], ['get', 'name:latin'], ['get', 'name']];
@@ -116,6 +120,21 @@ function bihEbenen(map: MLMap) {
   // daher nur in der Übersicht sichtbar und beim Hineinzoomen ausgeblendet.
   const ausblenden = (start: number) => ['interpolate', ['linear'], ['zoom'], 7, start, 8.5, 0] as any;
   map.addLayer({ id: 'svijet-maska', type: 'fill', source: 'maske', paint: { 'fill-color': F.krec, 'fill-opacity': ausblenden(0.6) } }, ersteSchrift);
+
+  // Osmanische Zierschicht (Sancaks um 1900, kalligraphisch beschriftet):
+  // liegt in der Übersicht über der Karte und verschwindet beim Hineinzoomen.
+  map.addSource('osmanska', {
+    type: 'image',
+    url: `${import.meta.env.BASE_URL}karte/osmanska-zierschicht.webp`,
+    coordinates: [[15.55, 45.35], [19.8, 45.35], [19.8, 42.45], [15.55, 42.45]] as any,
+  });
+  map.addLayer({
+    id: 'osmanska-zierschicht', type: 'raster', source: 'osmanska',
+    paint: {
+      'raster-opacity': ['interpolate', ['linear'], ['zoom'], 7.5, 0.9, 9, 0] as any,
+      'raster-fade-duration': 0,
+    },
+  }, ersteSchrift);
 
   if (osm) {
     // Grenzlinie exakt aus den OpenStreetMap-Daten der Grundkarte
