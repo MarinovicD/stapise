@@ -126,7 +126,7 @@ def main(scan_pfad):
     raster[~land] = 0
 
     # 6) Flächen als Pfade + Beschriftung nach Form
-    teile, beschriftungen = [], []
+    teile, kandidaten = [], {}
     for i, (schluessel, s) in enumerate(SANCAKS.items()):
         maske = raster == i + 1
         if maske.sum() < 500:
@@ -141,8 +141,11 @@ def main(scan_pfad):
         # Beschriftung nur am größten zusammenhängenden Teil ausrichten
         teile_lab, n = ndi.label(maske)
         groesster = teile_lab == (np.argmax(np.bincount(teile_lab.ravel())[1:]) + 1)
-        beschriftungen.append((schluessel, *beste_beschriftung(groesster, s)))
+        kandidaten[schluessel] = (s, kandidaten_fuer(groesster, s))
 
+    beschriftungen = einheitlich(kandidaten)
+    for k, text, g, w, *_ in beschriftungen:
+        print(f'{k}: {text} · {g:.0f} px · {w:.0f}°')
     schreibe_svg(teile, beschriftungen, bih_pfade, BREITE, hoehe_px)
     meta = {'coordinates': [[LON0, LAT1], [LON1, LAT1], [LON1, LAT0], [LON0, LAT0]],
             'breite': BREITE, 'hoehe': hoehe_px}
@@ -195,11 +198,11 @@ def groesstes_band(maske, verhaeltnis):
     return ergebnis
 
 
-def beste_beschriftung(maske, s):
-    """Gerade Beschriftung an der flächigsten Stelle, entlang der Form des Gebiets."""
+def kandidaten_fuer(maske, s):
+    """Alle möglichen geraden Platzierungen: (größe, text, winkel, x, y) je Textvariante und Winkel."""
     klein = 4                                            # Suche auf verkleinertem Raster
     m = maske[::klein, ::klein]
-    m_innen = ndi.binary_erosion(m, iterations=3)          # Abstand zu den Grenzlinien
+    m_innen = ndi.binary_erosion(m, iterations=2)          # Abstand zu den Grenzlinien
     yy, xx = np.nonzero(m)
     pts = np.stack([xx, yy], 1).astype(float)
     werte, vek = np.linalg.eigh(np.cov((pts - pts.mean(0)).T))
@@ -209,13 +212,12 @@ def beste_beschriftung(maske, s):
         if not text:
             continue
         verhaeltnis = textbreite(text) / BOX
-        for winkel in np.arange(grund - 35, grund + 36, 5):
+        for winkel in np.arange(grund - 60, grund + 61, 3):
             w = ((winkel + 90) % 180) - 90               # nie kopfüber
             gedreht = ndi.rotate(m_innen, w, reshape=True, order=0)
             h, cy, cx = groesstes_band(gedreht, verhaeltnis * 1.08)
             if h == 0:
                 continue
-            # Mittelpunkt zurück ins ungedrehte Raster
             Hr, Wr = gedreht.shape
             H0, W0 = m.shape
             a = math.radians(w)
@@ -223,15 +225,23 @@ def beste_beschriftung(maske, s):
             ox = math.cos(a) * dx - math.sin(a) * dy + W0 / 2
             oy = math.sin(a) * dx + math.cos(a) * dy + H0 / 2
             groesse = h * klein / BOX * 0.9
-            # bevorzugt: große Schrift, dann wenig Schräglage
-            wert = groesse - 0.05 * abs(w)
-            kandidaten.append((wert, text, groesse, w, ox * klein, oy * klein))
-    ohne = max(k for k in kandidaten if k[1] == s['name'])
-    mit = [k for k in kandidaten if k[1] != s['name']]
-    # Kaschida-Variante, wenn das Gebiet lang genug ist (Schrift höchstens 12 % kleiner)
-    wahl = max(mit) if mit and max(mit)[2] >= 0.88 * ohne[2] else ohne
-    _, text, groesse, w, x, y = wahl
-    return text, groesse, w, x, y
+            kandidaten.append((groesse, text, w, ox * klein, oy * klein))
+    return kandidaten
+
+
+def einheitlich(alle):
+    """Alle Namen gleich groß: die kleinste mögliche Größe ist die Obergrenze.
+    Wo dann Platz übrig ist, kommt die Kaschida-Variante zum Zug."""
+    groesse = min(max(k[0] for k in kand if k[1] == s['name']) for s, kand in alle.values())
+    ergebnis = []
+    for schluessel, (s, kand) in alle.items():
+        passend = [k for k in kand if k[0] >= groesse]
+        mit = [k for k in passend if k[1] != s['name']]
+        wahl_aus = mit or [k for k in passend if k[1] == s['name']]
+        # bei gleicher Größe: die Lage mit dem meisten Spielraum
+        _, text, w, x, y = max(wahl_aus, key=lambda k: k[0] - 0.02 * abs(k[2]))
+        ergebnis.append((schluessel, text, groesse, w, x, y))
+    return ergebnis
 
 
 def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
