@@ -86,7 +86,7 @@ Die Seite ist so gebaut, dass sie überall läuft: `npm run build` erzeugt den O
 
 ## Osmanische Zierschicht der Karte
 
-In der Übersicht liegt über der Karte eine Zierschicht im Stil des osmanischen Atlasblatts *Bosna Vilayeti* (1907): die Sancak-Grenzen (näherungsweise, auf die heutige Landesgrenze zugeschnitten) und die Namen der Sancaks in Rik'a-Kalligraphie, ausgerichtet nach der Form des Gebiets. Beim Hineinzoomen blendet sie aus.
+In der Übersicht liegt über der Karte eine Zierschicht im Stil des osmanischen Atlasblatts *Bosna Vilayeti* (1907): die Sancak-Grenzen (näherungsweise, auf die heutige Landesgrenze zugeschnitten) und die Namen der Sancaks in Nesih, ausgerichtet nach der Form des Gebiets. Beim Hineinzoomen blendet sie aus.
 
 Die Schicht ist neu gezeichnet; der Scan selbst wird nicht veröffentlicht. Neu erzeugen (z. B. nach Korrektur eines Namens in `scripts/osmanska-karta/erzeuge.py`):
 ```

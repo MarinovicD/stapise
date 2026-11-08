@@ -11,7 +11,7 @@ from playwright.async_api import async_playwright
 
 HIER = Path(__file__).resolve().parent
 PROJEKT = HIER.parent.parent
-SCHRIFT = PROJEKT / 'node_modules/@fontsource/aref-ruqaa/files/aref-ruqaa-arabic-700-normal.woff2'
+SCHRIFT = PROJEKT / 'node_modules/@fontsource/amiri/files/amiri-arabic-700-normal.woff2'
 ZIEL = PROJEKT / 'public/karte/osmanska-zierschicht.webp'
 
 
@@ -58,7 +58,7 @@ async def main():
     w, h = meta['breite'], meta['hoehe']
     svg = (HIER / 'zierschicht.svg').read_text(encoding='utf-8')
     html = f"""<!doctype html><html><head><meta charset="utf-8"><style>
-      @font-face {{ font-family: 'Aref Ruqaa'; font-weight: 700; src: url('{SCHRIFT.as_uri()}') format('woff2'); }}
+      @font-face {{ font-family: 'Amiri'; font-weight: 700; src: url('{SCHRIFT.as_uri()}') format('woff2'); }}
       html, body {{ margin: 0; background: transparent; }}
     </style></head><body>{svg}</body></html>"""
     seite = HIER / '_render.html'

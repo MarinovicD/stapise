@@ -6,7 +6,7 @@ Mahsus Mükemmel ve Mufassal Atlas, 1907) eine eigene, frei gezeichnete
 Zierschicht:
   - die Sancak-Grenzen, nachgezeichnet und auf die heutige Landesgrenze
     zugeschnitten (näherungsweise, ± wenige Kilometer)
-  - die Namen der Sancaks in Rik'a-Kalligraphie, ausgerichtet nach der Form
+  - die Namen der Sancaks in Nesih-Kalligraphie, ausgerichtet nach der Form
     des Gebiets (wie bei Europa Universalis)
 
 Der Scan selbst wird NICHT veröffentlicht – nur das, was hier neu gezeichnet wird.
@@ -32,8 +32,8 @@ PROJEKT = HIER.parent.parent
 
 # --- Sancaks: Name (bitte prüfen!), Saatpunkt im Scan (x, y), Farbton ------------
 SANCAKS = {
-    'bihke':    {'name': 'بیهکه سنجاغی',      'saat': (200, 330),  'farbe': '#E8C9A8'},
-    'banaluka': {'name': 'بانالوقه سنجاغی',   'saat': (520, 360),  'farbe': '#D9DDB0'},
+    'bihke':    {'name': 'بهكه سنجاغی',      'saat': (200, 330),  'farbe': '#E8C9A8'},
+    'banaluka': {'name': 'بنالوقه سنجاغی',   'saat': (520, 360),  'farbe': '#D9DDB0'},
     'izvornik': {'name': 'ازوورنیق سنجاغی',   'saat': (900, 500),  'farbe': '#EFD9A6'},
     'travnik':  {'name': 'تراونیك سنجاغی',    'saat': (420, 600),  'farbe': '#E9C4BE'},
     'bosna':    {'name': 'بوسنه سنجاغی',      'saat': (900, 800),  'farbe': '#CFDDB8'},
@@ -212,7 +212,7 @@ def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
         groesse = max(34, min(0.5 * dicke, 130))
         out.append(
             f'<text class="sancak" data-ziel="{laenge*0.82:.0f}" data-max="{groesse:.0f}" '
-            f'font-family="Aref Ruqaa" font-weight="700" font-size="{groesse:.0f}" fill="{tinte}" '
+            f'font-family="Amiri" font-weight="700" font-size="{groesse:.0f}" fill="{tinte}" '
             f'fill-opacity="0.82" direction="rtl" text-anchor="middle" '
             f'paint-order="stroke" stroke="#F6E9CF" stroke-width="{groesse*0.08:.1f}" stroke-opacity="0.6">'
             f'<textPath href="#bogen-{k}" startOffset="50%">{name}</textPath></text>')
