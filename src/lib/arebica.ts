@@ -6,7 +6,7 @@
  * wirkt auf die ganze Seite (und später auf die Ortsnamen der Karte).
  *
  * Festgelegt vom Projektinhaber am 08.11.2026.
- * Noch offen (vorläufig): o und u am Wortanfang; f, p, r, s, š, t (Vorschlag übernommen).
+ * Vollständig festgelegt; offen ist nur noch die Ausnahmeliste.
  */
 
 /** Zweibuchstabige Laute – werden vor den Einzelbuchstaben geprüft */
@@ -49,8 +49,8 @@ export const VOKALE: Record<string, { anfang: string; sonst: string; mitte?: str
   a: { anfang: 'آ', sonst: 'ا' },            // Elif mit Medde am Anfang, sonst Elif
   e: { anfang: 'ئ', sonst: 'ە' },            // Hemze auf Zacke; sonst nicht verbindendes He
   i: { anfang: 'اٖ', mitte: 'ي', sonst: 'ى' }, // Anfang: Elif mit Elif Hançeri; Mitte: Ye mit Punkten; Ende: Elif Maksura
-  o: { anfang: 'اۉ', sonst: 'ۉ' },           // Vav mit umgedrehtem kleinem v  (Anfang: vorläufig)
-  u: { anfang: 'اۆ', sonst: 'ۆ' },           // Vav mit kleinem v              (Anfang: vorläufig)
+  o: { anfang: 'ۉ', sonst: 'ۉ' },            // Vav mit umgedrehtem kleinem v, auch am Wortanfang ohne Elif
+  u: { anfang: 'ۆ', sonst: 'ۆ' },            // Vav mit kleinem v, auch am Wortanfang ohne Elif
 };
 
 export const REGELN = {

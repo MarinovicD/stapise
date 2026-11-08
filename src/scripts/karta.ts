@@ -17,6 +17,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import bih from '../data/bih.json';
 import { GRUPPEN, ART_LABEL, SPRACHE_LABEL, type Gruppe, type Art, type Sprache } from '../lib/konstanten';
 import { uArebicu } from '../lib/arebica';
+import { historischerName, ZUSAETZLICHE_ORTE, NACHBARLAENDER } from '../lib/imena';
 
 const STIL_URL = 'https://tiles.openfreemap.org/styles/positron';
 
@@ -51,19 +52,21 @@ function umfaerben(stil: StyleSpecification): StyleSpecification {
         if (sl === 'waterway' || sl === 'water') l.paint['line-color'] = F.wasserLinie;
         else if (sl === 'transportation') l.paint['line-color'] = l.id.includes('casing') ? F.strasseRand : F.strasse;
         else if (sl === 'boundary') l.paint['line-color'] = F.kamen;
-      } else if (l.type === 'symbol' && l.layout?.['text-field']) {
-        // Landesname „Bosna i Hercegovina“ ausblenden – dort stehen die osmanischen Sancak-Namen
-        if (l.id.startsWith('label_country') && Array.isArray(l.filter)) {
-          l.filter = ['all', l.filter, ['!=', ['get', 'iso_a2'], 'BA']];
+      } else if (l.type === 'symbol') {
+        // Orts-, Länder- und Gewässernamen zeichnen wir selbst (siehe eigeneBeschriftung)
+        if (['place', 'water_name', 'waterway'].includes(sl)) {
+          l.layout = { ...(l.layout ?? {}), visibility: 'none' };
+          continue;
         }
-        // Ortsnamen in lokaler Schreibweise statt Englisch/Kyrillisch
-        if (['place', 'water_name', 'mountain_peak'].includes(sl)) {
-          l.layout['text-field'] = ['coalesce', ['get', 'name:bs'], ['get', 'name:hr'], ['get', 'name:sr-Latn'], ['get', 'name:latin'], ['get', 'name']];
+        // alle übrigen Beschriftungen (Straßen, Gipfel …) nur innerhalb Bosniens
+        const innen = ['within', (bih as any).features[0].geometry];
+        l.filter = l.filter ? ['all', l.filter, innen] : innen;
+        l.metadata = { ...(l.metadata ?? {}), 'stapise:innen': true };
+        if (l.layout?.['text-field']) {
+          l.paint['text-color'] = sl === 'transportation_name' ? '#6B5A45' : F.orah;
+          l.paint['text-halo-color'] = F.krec;
+          l.paint['text-halo-width'] = 1.4;
         }
-        l.paint['text-color'] = sl === 'water_name' || sl === 'waterway' ? F.wasserText
-          : sl === 'transportation_name' ? '#6B5A45' : F.orah;
-        l.paint['text-halo-color'] = F.krec;
-        l.paint['text-halo-width'] = 1.4;
       }
     } catch { /* einzelne Ebene unverändert lassen */ }
   }
@@ -119,8 +122,8 @@ function bihEbenen(map: MLMap) {
 
   // Abblendung der Nachbarländer: grobe Natural-Earth-Form,
   // daher nur in der Übersicht sichtbar und beim Hineinzoomen ausgeblendet.
-  const ausblenden = (start: number) => ['interpolate', ['linear'], ['zoom'], 7, start, 8.5, 0] as any;
-  map.addLayer({ id: 'svijet-maska', type: 'fill', source: 'maske', paint: { 'fill-color': F.krec, 'fill-opacity': ausblenden(0.6) } }, ersteSchrift);
+  // außerhalb Bosniens: Details zurücknehmen, auf allen Zoomstufen
+  map.addLayer({ id: 'svijet-maska', type: 'fill', source: 'maske', paint: { 'fill-color': F.krec, 'fill-opacity': 0.82 } }, ersteSchrift);
 
   // Osmanische Zierschicht (Sancaks um 1900, kalligraphisch beschriftet):
   // liegt zurückhaltend über der Karte und blendet erst in der Detailansicht aus.
@@ -218,86 +221,134 @@ class Kompass implements maplibregl.IControl {
   onRemove() { this.map?.off('rotate', this.drehen); }
 }
 
-/* ---------- Ortsnamen in Arebica ---------- */
+/* ---------- Eigene Beschriftung: Orte, Gewässer, Nachbarländer ---------- */
+// Innerhalb Bosniens zeichnen wir alle Namen selbst – in Lateinschrift oder Arebica,
+// mit den historischen Ortsnamen aus src/lib/imena.ts. Außerhalb steht nur der Ländername.
 
-/** Größe der Beschriftung (CSS-Pixel) je Klasse: 1 Stadt · 2 Kleinstadt · 3 Dorf */
-const ORT_GROESSE: Record<number, number> = { 1: 21, 2: 17, 3: 14 };
-const ORT_SCHRIFT = '"Scheherazade New", "Amiri", serif';
+type Pismo = 'l' | 'a';
+type Stil = 'grad1' | 'grad2' | 'selo' | 'voda' | 'drzava';
 
-/** Zeichnet einen Ortsnamen in Arebica als Bild (der Browser übernimmt die arabische Satztechnik). */
-function ortsBild(name: string, klasse: number): ImageData {
-  const px = 2; // doppelte Auflösung für scharfe Schrift
-  const groesse = ORT_GROESSE[klasse] * px;
-  const text = uArebicu(name);
+const STILE: Record<Stil, { l: [string, number, string]; a: [string, number, string]; farbe: string }> = {
+  //            Lateinschrift: [Schnitt, Größe, Familie]        Arebica
+  grad1:  { l: ['600', 19, 'EB Garamond'],          a: ['700', 21, 'Scheherazade New'], farbe: '#3A2519' },
+  grad2:  { l: ['500', 15.5, 'EB Garamond'],        a: ['700', 17, 'Scheherazade New'], farbe: '#3A2519' },
+  selo:   { l: ['400', 13, 'EB Garamond'],          a: ['400', 14.5, 'Scheherazade New'], farbe: '#4A3A2C' },
+  voda:   { l: ['italic 400', 13.5, 'EB Garamond'], a: ['400', 15, 'Scheherazade New'], farbe: '#22696B' },
+  drzava: { l: ['600', 14, 'EB Garamond'],          a: ['700', 18, 'Scheherazade New'], farbe: '#8A7B66' },
+};
+
+function namensBild(text: string, stil: Stil, pismo: Pismo): ImageData {
+  const px = 2;
+  const st = STILE[stil];
+  const [schnitt, groesse, familie] = st[pismo];
+  const anzeige = pismo === 'a' ? uArebicu(text) : stil === 'drzava' ? text.toLocaleUpperCase('bs') : text;
+  const schrift = `${schnitt} ${groesse * px}px "${familie}", serif`;
   const c = document.createElement('canvas');
-  const ctx = c.getContext('2d')!;
-  const schrift = `${klasse === 3 ? 400 : 700} ${groesse}px ${ORT_SCHRIFT}`;
+  let ctx = c.getContext('2d')!;
   ctx.font = schrift;
-  const breite = Math.ceil(ctx.measureText(text).width) + 8 * px;
-  const hoehe = Math.ceil(groesse * 1.7);
+  const sperr = pismo === 'l' && stil === 'drzava' ? 3 * px : 0;
+  (ctx as any).letterSpacing = `${sperr}px`;
+  const breite = Math.ceil(ctx.measureText(anzeige).width) + 10 * px;
+  const hoehe = Math.ceil(groesse * px * (pismo === 'a' ? 1.75 : 1.45));
   c.width = breite; c.height = hoehe;
+  ctx = c.getContext('2d')!;
   ctx.font = schrift;
-  ctx.direction = 'rtl';
+  (ctx as any).letterSpacing = `${sperr}px`;
+  ctx.direction = pismo === 'a' ? 'rtl' : 'ltr';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = 'rgba(243,236,221,0.92)';
   ctx.lineWidth = 3.5 * px;
-  ctx.strokeText(text, breite / 2, hoehe / 2);
-  ctx.fillStyle = klasse === 3 ? '#4A3A2C' : F.orah;
-  ctx.fillText(text, breite / 2, hoehe / 2);
+  ctx.strokeText(anzeige, breite / 2, hoehe / 2);
+  ctx.fillStyle = st.farbe;
+  ctx.fillText(anzeige, breite / 2, hoehe / 2);
   return ctx.getImageData(0, 0, breite, hoehe);
 }
 
-async function arebicaOrte(map: MLMap) {
-  const res = await fetch(`${import.meta.env.BASE_URL}data/mjesta.json`);
-  const { orte } = (await res.json()) as { orte: [number, number, number, string][] };
-  await document.fonts.load(`700 20px ${ORT_SCHRIFT}`, 'آ').catch(() => {});
-  map.addSource('mjesta', {
-    type: 'geojson',
-    data: {
-      type: 'FeatureCollection',
-      features: orte.map(([lon, lat, klasse, name], i) => ({
-        type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
-        properties: { id: i, klasse, name },
-      })),
-    },
-  });
-  // Bilder erst erzeugen, wenn die Karte sie braucht
-  (map as any).setMissingStyleImageResolver((id: string) => {
-    if (!id.startsWith('mjesto-')) return;
-    const ort = orte[+id.slice(7)];
-    if (ort && !map.hasImage(id)) map.addImage(id, ortsBild(ort[3], ort[2]), { pixelRatio: 2 });
-  });
-  const ebene = (id: string, klasse: number, minzoom: number) => map.addLayer({
-    id, type: 'symbol', source: 'mjesta', minzoom,
-    filter: ['==', ['get', 'klasse'], klasse],
-    layout: {
-      visibility: 'none',
-      'icon-image': ['concat', 'mjesto-', ['to-string', ['get', 'id']]],
-      'icon-allow-overlap': false,
-      'icon-padding': 4,
-      'symbol-sort-key': ['get', 'id'],
-    },
-  }, 'natpisi-grupe');
-  ebene('mjesta-sela', 3, 9);
-  ebene('mjesta-gradici', 2, 7);
-  ebene('mjesta-gradovi', 1, 4);
-}
+const ORT_STIL: Record<number, Stil> = { 1: 'grad1', 2: 'grad2', 3: 'selo' };
 
-/** Zwischen lateinischen und Arebica-Ortsnamen umschalten (nur innerhalb Bosniens). */
-function ortsnamenSchrift(map: MLMap, arebica: boolean, originalFilter: Map<string, any>) {
-  const grenze = (bih as any).features[0].geometry;
-  for (const l of map.getStyle().layers) {
-    if ((l as any)['source-layer'] !== 'place' || l.id.startsWith('label_country')) continue;
-    if (!originalFilter.has(l.id)) originalFilter.set(l.id, (l as any).filter ?? null);
-    const orig = originalFilter.get(l.id);
-    const ausserhalb = ['!', ['within', grenze]];
-    map.setFilter(l.id, arebica ? (orig ? ['all', orig, ausserhalb] : ausserhalb) : orig);
-  }
-  for (const id of ['mjesta-sela', 'mjesta-gradici', 'mjesta-gradovi']) {
-    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', arebica ? 'visible' : 'none');
-  }
+async function eigeneBeschriftung(map: MLMap): Promise<(arebica: boolean) => void> {
+  const basis = import.meta.env.BASE_URL;
+  const [mjesta, vode] = await Promise.all([
+    fetch(`${basis}data/mjesta.json`).then((r) => r.json()),
+    fetch(`${basis}data/vode.json`).then((r) => r.json()),
+  ]);
+  await Promise.all([
+    document.fonts.load('700 20px "Scheherazade New"', 'آ'),
+    document.fonts.load('600 20px "EB Garamond"', 'Š'),
+    document.fonts.load('italic 400 14px "EB Garamond"', 'a'),
+  ]).catch(() => {});
+
+  // Texte je Bild-Kennung: "<art>-<nummer>"
+  const texte = new Map<string, { text: string; stil: Stil }>();
+  const punkt = (lon: number, lat: number, id: string, extra: object = {}) =>
+    ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { id, ...extra } });
+
+  const orte = [
+    ...(mjesta.orte as [number, number, number, string][]),
+    ...ZUSAETZLICHE_ORTE.map((o) => [o.lon, o.lat, o.klasse, o.name] as [number, number, number, string]),
+  ];
+  const ortPunkte = orte.map(([lon, lat, klasse, name], i) => {
+    const id = `m${i}`;
+    texte.set(id, { text: historischerName(name, lon, lat), stil: ORT_STIL[klasse] });
+    return punkt(lon, lat, id, { klasse, rang: i });
+  });
+  const flussLinien = (vode.rijeke as { name: string; linien: number[][][] }[]).map((r, i) => {
+    const id = `r${i}`;
+    texte.set(id, { text: r.name, stil: 'voda' });
+    return { type: 'Feature', geometry: { type: 'MultiLineString', coordinates: r.linien }, properties: { id } };
+  });
+  const seePunkte = (vode.jezera as [number, number, string][]).map(([lon, lat, name], i) => {
+    const id = `j${i}`;
+    texte.set(id, { text: name, stil: 'voda' });
+    return punkt(lon, lat, id);
+  });
+  const laender = NACHBARLAENDER.map((l, i) => {
+    const id = `d${i}`;
+    texte.set(id, { text: l.name, stil: 'drzava' });
+    return punkt(l.lon, l.lat, id);
+  });
+
+  const fc = (features: any[]) => ({ type: 'FeatureCollection', features } as any);
+  map.addSource('mjesta', { type: 'geojson', data: fc(ortPunkte) });
+  map.addSource('rijeke', { type: 'geojson', data: fc(flussLinien) });
+  map.addSource('jezera', { type: 'geojson', data: fc(seePunkte) });
+  map.addSource('drzave', { type: 'geojson', data: fc(laender) });
+
+  // Bilder entstehen erst, wenn die Karte sie braucht: Kennung "<id>-<l|a>"
+  (map as any).setMissingStyleImageResolver((bildId: string) => {
+    const m = /^(.+)-(l|a)$/.exec(bildId);
+    const t = m && texte.get(m[1]);
+    if (t && !map.hasImage(bildId)) map.addImage(bildId, namensBild(t.text, t.stil, m![2] as Pismo), { pixelRatio: 2 });
+  });
+
+  const bild = (p: Pismo) => ['concat', ['get', 'id'], `-${p}`] as any;
+  const vor = 'natpisi-grupe';
+  const ebenen: string[] = [];
+  const ebene = (id: string, quelle: string, minzoom: number, layout: any, filter?: any) => {
+    map.addLayer({ id, type: 'symbol', source: quelle, minzoom, ...(filter ? { filter } : {}),
+      layout: { 'icon-image': bild('l'), 'icon-padding': 3, ...layout } }, vor);
+    ebenen.push(id);
+  };
+  ebene('drzave', 'drzave', 0, { 'icon-allow-overlap': true });
+  ebene('rijeke', 'rijeke', 8, {
+    'symbol-placement': 'line', 'symbol-spacing': 320,
+    'icon-rotation-alignment': 'map', 'icon-keep-upright': true,
+  });
+  ebene('jezera', 'jezera', 9, {});
+  ebene('mjesta-sela', 'mjesta', 9.5, { 'symbol-sort-key': ['get', 'rang'], 'icon-padding': 6 }, ['==', ['get', 'klasse'], 3]);
+  ebene('mjesta-gradici', 'mjesta', 7, { 'symbol-sort-key': ['get', 'rang'] }, ['==', ['get', 'klasse'], 2]);
+  ebene('mjesta-gradovi', 'mjesta', 4, { 'symbol-sort-key': ['get', 'rang'] }, ['==', ['get', 'klasse'], 1]);
+
+  // Rückgabe: Umschalter zwischen Lateinschrift und Arebica
+  return (arebica: boolean) => {
+    for (const id of ebenen) map.setLayoutProperty(id, 'icon-image', bild(arebica ? 'a' : 'l'));
+    // übrige Beschriftungen der Grundkarte (Straßen, Gipfel …) gibt es nur in Lateinschrift
+    for (const l of map.getStyle().layers) {
+      if ((l as any).metadata?.['stapise:innen']) map.setLayoutProperty(l.id, 'visibility', arebica ? 'none' : 'visible');
+    }
+  };
 }
 
 /* ---------- Vorschau-Panel ---------- */
@@ -412,14 +463,13 @@ export async function starteKarte() {
 
     ladeAnzeige?.remove();
 
-    // Ortsnamen in Arebica (wenn die Seite auf Arebica steht)
+    // eigene Beschriftung (Orte, Gewässer, Nachbarländer) in Lateinschrift oder Arebica
     try {
-      await arebicaOrte(map);
-      const filter = new Map<string, any>();
-      const setze = () => ortsnamenSchrift(map, document.documentElement.dataset.pismo === 'arebica', filter);
+      const schrift = await eigeneBeschriftung(map);
+      const setze = () => schrift(document.documentElement.dataset.pismo === 'arebica');
       setze();
       window.addEventListener('pismo', setze);
-    } catch (e) { console.warn('Arebica-Ortsnamen nicht verfügbar', e); }
+    } catch (e) { console.warn('Eigene Beschriftung nicht verfügbar', e); }
   });
 
   /* Vorschau schließen */
