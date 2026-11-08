@@ -1,0 +1,7 @@
+Hier kommen die Originalfotos hinein (beliebige Größe, JPG/PNG/HEIC/WebP).
+Dieser Ordner wird NICHT auf GitHub hochgeladen.
+
+Danach im Projektordner ausführen:   npm run fotos
+
+Das Skript legt verkleinerte WebP-Versionen ohne GPS-/Kameradaten
+in public/fotos/ ab. Diese Dateinamen trägst du dann in der Inschrift ein.

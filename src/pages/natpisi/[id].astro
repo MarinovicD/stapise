@@ -1,0 +1,264 @@
+---
+/** Leseansicht einer Inschrift (Levha-Tafel). */
+import Basis from '../../layouts/Basis.astro';
+import Cetvel from '../../components/Cetvel.astro';
+import bih from '../../data/bih.json';
+import { alleInschriften, type Inschrift } from '../../lib/daten';
+import {
+  ART_LABEL, SPRACHE_LABEL, GRUPPEN, UEBERSETZUNGEN, SEITE, gruppeVon, datierungText, url,
+} from '../../lib/konstanten';
+
+export async function getStaticPaths() {
+  const alle = await alleInschriften();
+  return alle.map((eintrag) => ({ params: { id: eintrag.id }, props: { eintrag } }));
+}
+
+const { eintrag } = Astro.props as { eintrag: Inschrift };
+const d = eintrag.data;
+const gruppe = GRUPPEN[gruppeVon(d.art)];
+const datum = datierungText(d.datierung);
+const permalink = new URL(Astro.url.pathname, Astro.site).href;
+
+/* Nur Übersetzungs-Sprachen anbieten, die in mindestens einer Zeile vorhanden sind */
+const sprachenVorhanden = UEBERSETZUNGEN.filter((s) =>
+  d.zeilen.some((z) => (z.uebersetzung as Record<string, string | undefined>)[s.code]),
+);
+
+/* Mini-Karte: einfache Projektion der Landesgrenze in ein SVG */
+const LON0 = 15.6, LON1 = 19.7, LAT0 = 42.5, LAT1 = 45.35;
+const K = Math.cos((44 * Math.PI) / 180);
+const B = 300, H = Math.round((B * (LAT1 - LAT0)) / ((LON1 - LON0) * K));
+const px = (lon: number) => ((lon - LON0) / (LON1 - LON0)) * B;
+const py = (lat: number) => ((LAT1 - lat) / (LAT1 - LAT0)) * H;
+const umriss = (bih as any).features[0].geometry.coordinates
+  .map((poly: number[][][]) => 'M' + poly[0].map(([x, y]) => `${px(x).toFixed(1)} ${py(y).toFixed(1)}`).join(' L') + 'Z')
+  .join(' ');
+
+const metadaten: [string, string | undefined, boolean?][] = [
+  ['Nosilac natpisa', d.traeger],
+  ['Materijal', d.material],
+  ['Vrsta pisma', d.schrift],
+  ['Jezik', d.sprachen.map((s) => SPRACHE_LABEL[s]).join(', ')],
+  ['Datacija', datum + (d.datierung.chronogramm ? ' (hronogram)' : ''), true],
+  ['Vakif / naručilac', d.stifter],
+  ['Kaligraf', d.kalligraph],
+  ['Stanje', d.zustand],
+  ['Zabilježeno', d.erfasst.toLocaleDateString('bs-BA')],
+];
+const naslov = d.titel.bs;
+---
+<Basis titel={naslov} beschreibung={`${ART_LABEL[d.art]}, ${d.ort.stadt}: ${d.zeilen[0].uebersetzung.bs}`} aktiv="natpisi">
+  <div class="seite">
+    <nav class="brotkrumen" aria-label="Putanja">
+      <a href={url('')}>Karta</a><span aria-hidden="true">›</span>
+      <a href={url('natpisi/')}>Natpisi</a><span aria-hidden="true">›</span>
+      <span>{d.ort.stadt}</span>
+    </nav>
+
+    {d.status === 'beispiel' && (
+      <p class="primjer-traka">Ovo je <strong>primjer zapisa</strong> za probu izgleda – podaci nisu stvarni.</p>
+    )}
+
+    <div class="raspored">
+      <!-- Linke Spalte: Foto (unverändert), Standort -->
+      <div class="lijevo">
+        <div class:list={["foto", { "ohne-foto": d.fotos.length === 0 }]}>
+          <Cetvel dunkel>
+            {d.fotos.length > 0 ? (
+              <a href={url(`fotos/${d.fotos[0].datei}`)} target="_blank" rel="noopener">
+                <img src={url(`fotos/${d.fotos[0].datei}`)} alt={d.fotos[0].alt} />
+              </a>
+            ) : (
+              <div class="kein-foto musebak">Fotografija još nije dodana</div>
+            )}
+          </Cetvel>
+        </div>
+        {d.fotos[0] && (
+          <p class="foto-zasluge">
+            Foto: {d.fotos[0].fotograf ?? 'nepoznato'}{d.fotos[0].jahr && `, ${d.fotos[0].jahr}`} · {d.fotos[0].lizenz}
+            {d.fotos.length > 1 && <> · još {d.fotos.length - 1} fotografija</>}
+          </p>
+        )}
+
+        <div class="lokacija">
+          <svg viewBox={`-6 -6 ${B + 12} ${H + 12}`} role="img" aria-label={`Lokacija: ${d.ort.stadt}`}>
+            <path d={umriss} fill="#EFE3C8" stroke="#B08A3E" stroke-width="2" stroke-linejoin="round" />
+            <circle cx={px(d.ort.lng)} cy={py(d.ort.lat)} r="13" fill="#1F2E66" opacity=".15" />
+            <circle cx={px(d.ort.lng)} cy={py(d.ort.lat)} r="5.5" fill="#1F2E66" stroke="#F3ECDD" stroke-width="2" />
+          </svg>
+          <div>
+            <div class="label">Lokacija</div>
+            <div class="grad">{d.ort.stadt}</div>
+            {(d.ort.bauwerk || d.ort.position) && (
+              <div class="objekt">{[d.ort.bauwerk, d.ort.position].filter(Boolean).join(', ')}</div>
+            )}
+            {d.ort.genauigkeit === 'ungefaehr' && <div class="objekt">(približna lokacija)</div>}
+          </div>
+        </div>
+      </div>
+
+      <!-- Rechte Spalte: die Levha-Tafel -->
+      <article class="levha">
+        <div class="oznake">
+          <span class="oznaka" style={`background:${gruppe.text}`}>{ART_LABEL[d.art]}</span>
+          <span class="label">{d.inventarnummer}</span>
+        </div>
+        <h1>{naslov}</h1>
+        <p class="mjesto">{d.ort.stadt} · <span class="datum">{datum}</span></p>
+
+        <section class="transkripcija" aria-labelledby="t-naslov">
+          <h2 id="t-naslov" class="label">Transkripcija</h2>
+          <ol class="original" lang="ar" dir="rtl">
+            {d.zeilen.map((z, i) => <li data-zeile={i + 1}><span class="talik">{z.original}</span></li>)}
+          </ol>
+        </section>
+
+        <section class="transliteracija" aria-labelledby="tl-naslov">
+          <h2 id="tl-naslov" class="label">Transliteracija</h2>
+          <ol>
+            {d.zeilen.map((z, i) => <li data-zeile={i + 1}><i>{z.transliteration}</i></li>)}
+          </ol>
+        </section>
+
+        <section class="prijevod" aria-labelledby="pr-naslov" data-jezik="bs">
+          <h2 id="pr-naslov" class="sr-only">Prijevod</h2>
+          <div class="kartice" role="tablist" aria-label="Jezik prijevoda">
+            {sprachenVorhanden.map((s, i) => (
+              <button type="button" role="tab" data-jezik={s.code} aria-selected={i === 0 ? 'true' : 'false'}>{s.label}</button>
+            ))}
+          </div>
+          <ol>
+            {d.zeilen.map((z, i) => (
+              <li data-zeile={i + 1}>
+                {sprachenVorhanden.map((s) => (
+                  <span lang={s.code} data-jezik={s.code}>
+                    {(z.uebersetzung as Record<string, string | undefined>)[s.code] ?? '—'}
+                  </span>
+                ))}
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {d.kommentar && (
+          <section class="komentar">
+            <h2 class="label">Komentar</h2>
+            <p>{d.kommentar.bs}</p>
+          </section>
+        )}
+
+        <dl class="podaci">
+          {metadaten.filter(([, v]) => v).map(([k, v, rot]) => (
+            <div><dt class="label">{k}</dt><dd class:list={{ datum: rot }}>{v}</dd></div>
+          ))}
+        </dl>
+
+        {d.literatur.length > 0 && (
+          <section class="literatura">
+            <h2 class="label">Literatura</h2>
+            <ul>{d.literatur.map((l) => <li>{l}</li>)}</ul>
+          </section>
+        )}
+
+        <div class="citiranje">
+          <div class="label">Citiranje</div>
+          <p>{SEITE.name}, natpis {d.inventarnummer}, „{naslov}“, {d.ort.stadt}. URL: <a href={permalink}>{permalink}</a></p>
+        </div>
+      </article>
+    </div>
+  </div>
+</Basis>
+
+<script>
+  // Übersetzungs-Tabs
+  document.querySelectorAll<HTMLElement>('.prijevod').forEach((box) => {
+    box.querySelectorAll<HTMLButtonElement>('[role=tab]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        box.dataset.jezik = tab.dataset.jezik;
+        box.querySelectorAll('[role=tab]').forEach((t) => t.setAttribute('aria-selected', String(t === tab)));
+      });
+    });
+  });
+  // Zusammengehörige Zeilen gemeinsam hervorheben
+  document.querySelectorAll<HTMLElement>('[data-zeile]').forEach((el) => {
+    const nr = el.dataset.zeile;
+    const gruppe = () => document.querySelectorAll(`[data-zeile="${nr}"]`);
+    el.addEventListener('mouseenter', () => gruppe().forEach((x) => x.classList.add('aktiv')));
+    el.addEventListener('mouseleave', () => gruppe().forEach((x) => x.classList.remove('aktiv')));
+  });
+</script>
+
+<style>
+  .seite { padding: 22px var(--rand) 0; display: flex; flex-direction: column; gap: 20px; }
+  .brotkrumen { display: flex; gap: 10px; font-size: 16px; color: var(--text-3); flex-wrap: wrap; }
+  .primjer-traka { margin: 0; }
+
+  .raspored { display: flex; gap: 56px; align-items: flex-start; flex-wrap: wrap; }
+  .lijevo { flex: 1 1 380px; max-width: 560px; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 16px; }
+  .foto { aspect-ratio: 7 / 8; }
+  .foto.ohne-foto { aspect-ratio: 2 / 1; }
+  .foto img { width: 100%; height: 100%; object-fit: contain; }
+  .foto a { display: block; height: 100%; }
+  .kein-foto { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; color: var(--text-2); font-size: 18px; }
+  .foto-zasluge { margin: 0; font-size: 15px; font-style: italic; color: var(--text-3); }
+
+  .lokacija { display: flex; gap: 20px; align-items: center; padding: 16px; background: var(--ahar-hell); border: 1px solid var(--kamen-hell); }
+  .lokacija svg { width: 180px; flex-shrink: 0; }
+  .grad { font-family: var(--f-titel); font-size: 26px; font-weight: 600; }
+  .objekt { font-size: 16px; color: var(--text-2); }
+
+  .levha { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+  .oznake { display: flex; gap: 12px; align-items: center; }
+  .levha h1 { font-size: clamp(36px, 4.5vw, 54px); }
+  .mjesto { margin: -8px 0 0; font-size: 19px; color: var(--text-2); }
+  .datum { color: var(--cilim); }
+
+  .transkripcija {
+    background: #F7EFDC; border-top: 3px solid var(--varak); border-bottom: 3px solid var(--varak);
+    box-shadow: inset 0 4px 0 -1px #F7EFDC, inset 0 5px 0 -1px var(--cilim), inset 0 -4px 0 -1px #F7EFDC, inset 0 -5px 0 -1px var(--cilim);
+    padding: 22px 26px 18px;
+  }
+  .transkripcija h2 { margin-bottom: 6px; }
+  .original { gap: 0; }
+  .original li { align-items: center; padding: 4px 6px; border-bottom: 1px dotted var(--kamen-hell); }
+  .original li:last-child { border-bottom: none; }
+  .original li .talik { font-size: clamp(24px, 2.8vw, 32px); line-height: 2.2; }
+
+  .transliteracija h2, .komentar h2, .literatura h2 { margin-bottom: 8px; }
+  ol { margin: 0; padding: 0; list-style: none; counter-reset: z; display: flex; flex-direction: column; gap: 6px; }
+  ol li { counter-increment: z; display: flex; gap: 14px; padding: 2px 6px; border-radius: 2px; transition: background .2s; }
+  ol li::before { content: counter(z); width: 22px; flex-shrink: 0; text-align: right; font-family: var(--f-titel); font-size: 20px; color: var(--cilim); }
+  ol li.aktiv { background: #EFE2C2; }
+  .transliteracija li { font-size: 22px; color: var(--lapis); }
+  .prijevod li { font-size: 20px; }
+
+  .kartice { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--kamen); margin-bottom: 12px; }
+  .kartice button {
+    background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer;
+    padding: 10px 16px 8px; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3);
+  }
+  .kartice button[aria-selected='true'] { color: var(--murekkep); border-bottom-color: var(--cilim); }
+  .prijevod [data-jezik]:not(button) { display: none; }
+  .prijevod[data-jezik='bs'] span[data-jezik='bs'],
+  .prijevod[data-jezik='de'] span[data-jezik='de'],
+  .prijevod[data-jezik='en'] span[data-jezik='en'],
+  .prijevod[data-jezik='tr'] span[data-jezik='tr'] { display: inline; }
+
+  .komentar p { margin: 0; color: var(--text-2); }
+
+  .podaci {
+    margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); column-gap: 28px;
+    border-top: 2px solid var(--varak); padding-top: 4px;
+  }
+  .podaci div { padding: 10px 0; border-bottom: 1px solid #DCCFB6; }
+  .podaci dt { font-size: 12px; }
+  .podaci dd { margin: 2px 0 0; font-size: 18px; }
+
+  .literatura ul { margin: 0; padding-left: 20px; }
+  .citiranje { padding: 16px 20px; background: var(--ahar-hell); border: 1px solid var(--kamen-hell); }
+  .citiranje p { margin: 4px 0 0; font-size: 16px; overflow-wrap: anywhere; }
+
+  @media (max-width: 900px) {
+    .lijevo { position: static; max-width: none; }
+  }
+</style>

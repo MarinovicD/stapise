@@ -1,0 +1,139 @@
+/* ==========================================================================
+   Šta piše? – Stilrichtung „Mahala-Manuskript“
+   Alle Farben und Abstände als Variablen, damit sich das Design zentral
+   anpassen lässt.
+   ========================================================================== */
+
+:root {
+  /* Farben */
+  --krec: #F3ECDD;        /* Kalkweiß – Grund */
+  --ahar: #E6D6B4;        /* Papier – Flächen */
+  --ahar-hell: #FBF7EE;   /* helles Papier – Eingabefelder, Karten */
+  --murekkep: #1E1915;    /* Tinte – Text */
+  --text-2: #3A2E24;      /* gedämpfter Text */
+  --text-3: #6B5A45;      /* Labels */
+  --orah: #3A2519;        /* Nussholz – dunkle Flächen */
+  --varak: #B08A3E;       /* Blattgold – nur Schmuck */
+  --varak-flaeche: #C9A75A;
+  --lapis: #1F2E66;       /* Links, Buttons */
+  --cilim: #9B2C2A;       /* Akzent */
+  --neretva: #2F8A8C;     /* Akzent Wasser */
+  --neretva-text: #22696B;/* Türkis mit genug Kontrast für Text */
+  --kamen: #B7AA94;       /* Linien */
+  --kamen-hell: #CDBFA5;
+  --maslina: #4A5230;
+
+  /* Schriften */
+  /* Cormorant Garamond wurde verworfen: Häkchen auf š, ž, č stehen dort schief.
+     EB Garamond setzt die bosnischen Buchstaben und die Transliteration sauber. */
+  --f-titel: 'EB Garamond', 'Times New Roman', serif;
+  --f-text: 'EB Garamond', Georgia, serif;
+  --f-talik: 'Noto Nastaliq Urdu', 'Amiri', serif;
+  --f-nesih: 'Amiri', 'Noto Naskh Arabic', serif;
+
+  /* Maße */
+  --rand: clamp(16px, 4vw, 72px);
+  --kopf-hoehe: 76px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--krec);
+  color: var(--murekkep);
+  font-family: var(--f-text);
+  font-size: 18px;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: var(--lapis); text-underline-offset: 3px; }
+a:hover { color: var(--cilim); }
+
+:focus-visible { outline: 2px solid var(--lapis); outline-offset: 2px; }
+
+h1, h2, h3 { font-family: var(--f-titel); font-weight: 500; line-height: 1.05; margin: 0; }
+
+img { max-width: 100%; display: block; }
+
+button, input, select { font: inherit; color: inherit; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Kleine Großbuchstaben-Labels */
+.label {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Arabische Schrift */
+.arapski { font-family: var(--f-nesih); direction: rtl; }
+.talik { font-family: var(--f-talik); direction: rtl; line-height: 2.1; }
+
+/* Buttons */
+.dugme {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 22px;
+  background: var(--lapis); color: var(--krec);
+  border: none; text-decoration: none; cursor: pointer;
+  font-size: 17px; letter-spacing: 0.03em;
+}
+.dugme:hover { background: #2A3C80; color: var(--krec); }
+.dugme--obrub { background: transparent; color: var(--lapis); border: 1px solid var(--lapis); }
+.dugme--obrub:hover { background: var(--lapis); color: var(--krec); }
+
+/* Typ-Etikett */
+.oznaka {
+  display: inline-block; padding: 4px 11px;
+  font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--krec);
+}
+
+/* Hinweis bei Beispieldaten */
+.primjer-traka {
+  background: repeating-linear-gradient(-45deg, #F6E7C1 0 14px, #F1DDAB 14px 28px);
+  border: 1px solid var(--varak);
+  padding: 10px 16px; font-size: 16px; color: var(--text-2);
+}
+
+/* Mušebak-Gitter als wiederverwendbarer Hintergrund */
+.musebak {
+  background-color: var(--ahar);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(58, 37, 25, .18) 0 3px, transparent 3px 22px),
+    repeating-linear-gradient(-45deg, rgba(58, 37, 25, .18) 0 3px, transparent 3px 22px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Kartenmarkierungen (werden per Skript erzeugt) ---------- */
+.sp-pin {
+  border: none; background: none; padding: 0; cursor: pointer;
+  filter: drop-shadow(0 2px 2px rgba(30, 25, 21, .25));
+  transition: transform .15s;
+}
+.sp-pin:hover { transform: translateY(-2px) scale(1.08); }
+.sp-pin.aktiv svg path { fill: var(--lapis); }
+.sp-pin.aktiv { transform: scale(1.25); }
+.sp-semse {
+  position: relative; width: 60px; height: 60px; border: none; background: none; padding: 0; cursor: pointer;
+  filter: drop-shadow(0 2px 3px rgba(30, 25, 21, .25));
+}
+.sp-semse span {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--f-titel); font-weight: 600; font-size: 20px; color: var(--murekkep);
+}
+.sp-semse:hover { transform: scale(1.06); }
+.maplibregl-ctrl-attrib { font-family: var(--f-text); font-size: 12px; }
+.maplibregl-ctrl-group { border-radius: 0 !important; border: 1px solid var(--varak); box-shadow: none !important; }
+.maplibregl-ctrl-group button { width: 40px; height: 40px; }

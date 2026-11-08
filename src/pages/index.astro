@@ -1,0 +1,133 @@
+---
+/** Startseite = das Herzstück: die interaktive Karte. */
+import Basis from '../layouts/Basis.astro';
+import Musebak from '../components/Musebak.astro';
+import Cetvel from '../components/Cetvel.astro';
+import { GRUPPEN, SPRACHE_LABEL, SPRACHEN, url } from '../lib/konstanten';
+import { alleInschriften } from '../lib/daten';
+
+const anzahl = (await alleInschriften()).length;
+const datenUrl = url('data/natpisi.json');
+---
+<Basis vollbild aktiv="karta">
+  <div class="karta-seite">
+    <aside class="filter" aria-label="Filteri">
+      <div class="feld">
+        <label class="label" for="pretraga">Pretraga</label>
+        <input id="pretraga" type="search" placeholder="Mjesto, naslov …" autocomplete="off" />
+      </div>
+
+      <fieldset>
+        <legend class="label">Vrsta objekta</legend>
+        {Object.entries(GRUPPEN).map(([id, g]) => (
+          <label class="kvacica">
+            <input type="checkbox" name="gruppe" value={id} checked />
+            <span class="tacka" style={`background:${g.farbe}`} aria-hidden="true"></span>
+            {g.label}
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset>
+        <legend class="label">Jezik</legend>
+        {SPRACHEN.map((s) => (
+          <label class="kvacica">
+            <input type="checkbox" name="sprache" value={s} checked />
+            {SPRACHE_LABEL[s]}
+          </label>
+        ))}
+      </fieldset>
+
+      <p class="brojac" aria-live="polite"><span id="brojac">{anzahl}</span> natpisa na karti</p>
+    </aside>
+
+    <div class="karta-okvir">
+      <div id="karta" data-quelle={datenUrl} aria-label="Interaktivna karta natpisa u Bosni i Hercegovini" role="region"></div>
+      <Musebak variante="karte" text="Karta se crta …" />
+    </div>
+
+    <aside class="pregled" id="pregled" aria-label="Odabrani natpis" hidden>
+      <div class="pregled-kopf">
+        <span class="oznaka" id="p-oznaka"></span>
+        <button type="button" class="zatvori" id="p-zatvori" aria-label="Zatvori">×</button>
+      </div>
+      <div class="pregled-foto">
+        <Cetvel klein dunkel>
+          <img id="p-img" alt="" hidden />
+          <div id="p-kein-foto" class="kein-foto musebak">Fotografija još nije dodana</div>
+        </Cetvel>
+      </div>
+      <h2 id="p-naslov"></h2>
+      <p class="pregled-mjesto"><span id="p-mjesto"></span> · <span class="datum" id="p-datum"></span></p>
+      <p class="pregled-zeile talik" id="p-zeile" lang="ar"></p>
+      <p class="pregled-info" id="p-info"></p>
+      <a class="dugme" id="p-link" href="#">Pročitaj natpis →</a>
+    </aside>
+  </div>
+</Basis>
+
+<script>
+  import { starteKarte } from '../scripts/karta';
+  starteKarte();
+</script>
+
+<style>
+  .karta-seite { flex: 1; display: flex; min-height: 0; position: relative; }
+
+  .filter {
+    width: 300px; flex-shrink: 0; overflow-y: auto;
+    background: var(--ahar); border-right: 1px solid var(--varak);
+    padding: 24px 26px; display: flex; flex-direction: column; gap: 22px;
+  }
+  .feld { display: flex; flex-direction: column; gap: 8px; }
+  .filter input[type='search'] {
+    height: 46px; padding: 0 14px; background: var(--ahar-hell); border: 1px solid var(--kamen); font-size: 17px;
+  }
+  fieldset { border: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  legend { padding: 0; margin-bottom: 8px; }
+  .kvacica { display: flex; align-items: center; gap: 10px; min-height: 34px; font-size: 17px; cursor: pointer; }
+  .kvacica input { width: 18px; height: 18px; margin: 0; accent-color: var(--lapis); }
+  .tacka { width: 12px; height: 13px; border-radius: 6px 6px 1px 1px; flex-shrink: 0; }
+  .brojac { margin: auto 0 0; font-size: 16px; color: var(--text-2); }
+  .brojac span { font-family: var(--f-titel); font-size: 26px; color: var(--cilim); font-weight: 600; }
+
+  .karta-okvir { flex: 1; position: relative; min-width: 0; }
+  #karta { position: absolute; inset: 0; }
+
+  .pregled {
+    width: 380px; flex-shrink: 0; overflow-y: auto;
+    background: var(--ahar-hell); border-left: 1px solid var(--varak);
+    padding: 22px 26px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .pregled[hidden] { display: none; }
+  .pregled-kopf { display: flex; justify-content: space-between; align-items: center; }
+  .zatvori { width: 44px; height: 44px; border: none; background: none; font-size: 26px; color: var(--text-3); cursor: pointer; }
+  .pregled-foto { height: 220px; }
+  .pregled-foto img { width: 100%; height: 100%; object-fit: contain; }
+  .kein-foto { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; font-size: 16px; color: var(--text-2); }
+  .kein-foto[hidden] { display: none; }
+  .pregled h2 { font-size: 32px; }
+  .pregled-mjesto { margin: 0; color: var(--text-2); }
+  .datum { color: var(--cilim); }
+  .pregled-zeile {
+    margin: 0; background: var(--ahar); border-radius: 40px; padding: 8px 22px 2px;
+    font-size: 22px; text-align: center;
+  }
+  .pregled-info { margin: 0; font-size: 16px; color: var(--text-2); }
+  .pregled .dugme { margin-top: auto; }
+
+  /* Handy und Tablet: Filter oben, Vorschau als Blatt von unten */
+  @media (max-width: 900px) {
+    .karta-seite { flex-direction: column; }
+    .filter { width: auto; max-height: none; flex-direction: row; flex-wrap: wrap; gap: 10px 22px; padding: 12px var(--rand); border-right: none; border-bottom: 1px solid var(--varak); }
+    .filter fieldset { display: none; }
+    .feld { flex: 1; min-width: 200px; flex-direction: row; align-items: center; }
+    .feld .label { display: none; }
+    .brojac { margin: 0; align-self: center; }
+    .pregled {
+      position: absolute; left: 0; right: 0; bottom: 0; width: auto; max-height: 70%;
+      border-left: none; border-top: 2px solid var(--varak); z-index: 10; box-shadow: 0 -8px 24px rgba(30,25,21,.15);
+    }
+    .pregled-foto { height: 160px; }
+  }
+</style>

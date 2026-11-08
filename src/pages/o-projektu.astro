@@ -1,0 +1,42 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { SEITE } from '../lib/konstanten';
+---
+<Basis titel="O projektu" aktiv="o-projektu">
+  <article class="tekst">
+    <div class="label">O projektu</div>
+    <h1>{SEITE.name}</h1>
+    <p class="vodeci">
+      Na džamijama, česmama, mostovima i nišanima širom Bosne i Hercegovine stoje natpisi na arapskom,
+      osmanskom turskom, perzijskom i bosanskom jeziku. Većina prolaznika ih ne može pročitati.
+      {SEITE.name} ih bilježi, prepisuje, transliterira i prevodi.
+    </p>
+
+    <h2>Kako se koristi</h2>
+    <p>[Kratko objašnjenje: karta, pretraga, čitanje natpisa.]</p>
+
+    <h2>Metoda</h2>
+    <p>[Sistem transliteracije, izvori, način dokumentovanja.]</p>
+
+    <h2>Autor</h2>
+    <p>[Ime, kratka biografija, kontakt.]</p>
+
+    <h2 id="impresum">Impresum</h2>
+    <p>[Ime i adresa odgovorne osobe – pravno obavezno.]</p>
+
+    <h2 id="privatnost">Privatnost</h2>
+    <p>
+      Ova stranica ne koristi kolačiće (cookies) ni alate za praćenje. Fontovi se učitavaju s ove stranice.
+      Za prikaz karte preglednik učitava podatke s OpenFreeMap (podaci © OpenStreetMap).
+      [Potpuna izjava o privatnosti.]
+    </p>
+  </article>
+</Basis>
+
+<style>
+  .tekst { max-width: 760px; padding: 48px var(--rand) 0; display: flex; flex-direction: column; gap: 14px; }
+  h1 { font-size: clamp(44px, 6vw, 72px); }
+  h2 { font-size: 32px; margin-top: 22px; }
+  p { margin: 0; color: var(--text-2); }
+  .vodeci { font-size: 22px; color: var(--murekkep); }
+</style>

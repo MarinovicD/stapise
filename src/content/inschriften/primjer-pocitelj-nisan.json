@@ -1,0 +1,42 @@
+{
+  "status": "beispiel",
+  "inventarnummer": "SP-0003",
+  "titel": {
+    "bs": "Primjer: natpis na nišanu",
+    "de": "Beispiel: Inschrift auf einem Grabstein",
+    "en": "Example: inscription on a tombstone"
+  },
+  "art": "grabstein",
+  "ort": {
+    "stadt": "Počitelj",
+    "bauwerk": "[Haremluk]",
+    "lat": 43.1347,
+    "lng": 17.7316,
+    "genauigkeit": "ungefaehr"
+  },
+  "sprachen": ["arabisch", "osmanisch"],
+  "traeger": "nišan",
+  "material": "kamen",
+  "datierung": { "hidschri": null, "gregorianisch": null, "anzeige": "[datum]" },
+  "zeilen": [
+    {
+      "original": "هو الباقی",
+      "transliteration": "Huwa l-bāqī",
+      "uebersetzung": { "bs": "On je Vječni.", "de": "Er ist der Ewige.", "en": "He is the Everlasting." }
+    },
+    {
+      "original": "الفاتحة",
+      "transliteration": "al-Fātiḥa",
+      "uebersetzung": {
+        "bs": "El-Fatiha [proučite za dušu umrlog].",
+        "de": "Die Fātiḥa [lest sie für die Seele des Verstorbenen].",
+        "en": "Al-Fatiha [recite it for the soul of the deceased]."
+      }
+    }
+  ],
+  "kommentar": {
+    "bs": "Primjer zapisa za nišan. Formule su uobičajene na nišanima; ostali podaci nisu stvarni.",
+    "de": "Beispiel für einen Grabstein. Die Formeln sind auf Nišani üblich; alle übrigen Angaben sind nicht echt."
+  },
+  "erfasst": "2026-11-08"
+}

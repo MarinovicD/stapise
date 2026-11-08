@@ -1,0 +1,38 @@
+{
+  "status": "beispiel",
+  "inventarnummer": "SP-0002",
+  "titel": {
+    "bs": "Primjer: natpis na česmi",
+    "de": "Beispiel: Inschrift an einem Brunnen",
+    "en": "Example: inscription on a fountain"
+  },
+  "art": "brunnen",
+  "ort": {
+    "stadt": "Sarajevo",
+    "bauwerk": "[Naziv česme]",
+    "position": "na čeonoj ploči",
+    "lat": 43.8597,
+    "lng": 18.4313,
+    "genauigkeit": "ungefaehr"
+  },
+  "sprachen": ["osmanisch", "arabisch"],
+  "schrift": "[Vrsta pisma]",
+  "traeger": "kamena ploča",
+  "datierung": { "hidschri": null, "gregorianisch": null, "anzeige": "[datum]", "chronogramm": true },
+  "zeilen": [
+    {
+      "original": "وجعلنا من الماء كل شیء حی",
+      "transliteration": "Wa-ǧaʿalnā mina l-māʾi kulla šayʾin ḥayy",
+      "uebersetzung": {
+        "bs": "I od vode smo sve živo stvorili. (Kur'an 21:30)",
+        "de": "Und Wir haben aus dem Wasser alles Lebendige gemacht. (Koran 21:30)",
+        "en": "And We made from water every living thing. (Qur'an 21:30)"
+      }
+    }
+  ],
+  "kommentar": {
+    "bs": "Primjer zapisa s jednim retkom. Kur'anski ajet o vodi čest je na česmama; ostali podaci nisu stvarni.",
+    "de": "Beispiel mit einer Zeile. Der Koranvers über das Wasser ist an Brunnen häufig; alle übrigen Angaben sind nicht echt."
+  },
+  "erfasst": "2026-11-08"
+}

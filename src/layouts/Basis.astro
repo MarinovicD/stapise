@@ -1,0 +1,108 @@
+---
+import '@fontsource/eb-garamond/400.css';
+import '@fontsource/eb-garamond/400-italic.css';
+import '@fontsource/eb-garamond/500.css';
+import '@fontsource/eb-garamond/500-italic.css';
+import '@fontsource/eb-garamond/600.css';
+import '@fontsource/amiri/arabic-400.css';
+import '@fontsource/noto-nastaliq-urdu/arabic-400.css';
+import '../styles/global.css';
+import Ebru from '../components/Ebru.astro';
+import { SEITE, url } from '../lib/konstanten';
+
+interface Props {
+  titel?: string;
+  beschreibung?: string;
+  /** Kartenseite: volle Fensterhöhe, ohne Fußzeile zum Scrollen */
+  vollbild?: boolean;
+  aktiv?: 'karta' | 'natpisi' | 'o-projektu';
+}
+const { titel, beschreibung = SEITE.untertitel, vollbild = false, aktiv } = Astro.props;
+const seitentitel = titel ? `${titel} · ${SEITE.name}` : `${SEITE.name} – ${SEITE.untertitel}`;
+const nav = [
+  { id: 'karta', label: 'Karta', href: url('') },
+  { id: 'natpisi', label: 'Natpisi', href: url('natpisi/') },
+  { id: 'o-projektu', label: 'O projektu', href: url('o-projektu/') },
+];
+---
+<!doctype html>
+<html lang="bs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{seitentitel}</title>
+    <meta name="description" content={beschreibung} />
+    <meta property="og:title" content={seitentitel} />
+    <meta property="og:description" content={beschreibung} />
+    <link rel="icon" href={url('favicon.svg')} type="image/svg+xml" />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+  </head>
+  <body class:list={{ vollbild }}>
+    <a class="sr-only" href="#sadrzaj">Preskoči na sadržaj</a>
+    <Ebru position="oben" />
+    <header class="kopf">
+      <a class="logo" href={url('')}>
+        <span class="logo-name">{SEITE.name}</span>
+        <span class="talik logo-ornament" aria-hidden="true">{SEITE.ornament}</span>
+      </a>
+      <nav aria-label="Glavna navigacija">
+        {nav.map((n) => (
+          <a href={n.href} aria-current={aktiv === n.id ? 'page' : undefined}>{n.label}</a>
+        ))}
+      </nav>
+    </header>
+
+    <main id="sadrzaj">
+      <slot />
+    </main>
+
+    {!vollbild && (
+      <footer class="fuss">
+        <Ebru position="unten" variante="sepia" hoehe={18} />
+        <div class="fuss-inhalt">
+          <div>
+            <div class="fuss-name">{SEITE.name}</div>
+            <div class="fuss-unter">{SEITE.untertitel}</div>
+          </div>
+          <nav aria-label="Podnožje">
+            <a href={url('o-projektu/')}>O projektu</a>
+            <a href={url('o-projektu/#impresum')}>Impresum</a>
+            <a href={url('o-projektu/#privatnost')}>Privatnost</a>
+          </nav>
+        </div>
+      </footer>
+    )}
+  </body>
+</html>
+
+<style>
+  body { min-height: 100vh; display: flex; flex-direction: column; }
+  body.vollbild { height: 100vh; height: 100dvh; overflow: hidden; }
+  main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+  .kopf {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px 32px; flex-wrap: wrap;
+    padding: 12px var(--rand); border-bottom: 1px solid var(--kamen-hell);
+  }
+  .logo { display: flex; align-items: baseline; gap: 14px; text-decoration: none; color: var(--murekkep); }
+  .logo-name { font-family: var(--f-titel); font-size: 30px; font-weight: 600; }
+  .logo-ornament { font-size: 19px; color: var(--varak); line-height: 1.6; }
+  .kopf nav { display: flex; gap: 8px 30px; flex-wrap: wrap; }
+  .kopf nav a {
+    color: var(--murekkep); text-decoration: none; font-size: 18px;
+    padding: 10px 0 6px; border-bottom: 2px solid transparent;
+  }
+  .kopf nav a:hover { color: var(--lapis); }
+  .kopf nav a[aria-current='page'] { color: var(--lapis); border-bottom-color: var(--cilim); }
+
+  .fuss { background: var(--orah); color: var(--ahar); margin-top: 64px; }
+  .fuss-inhalt {
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 26px var(--rand);
+  }
+  .fuss-name { font-family: var(--f-titel); font-size: 24px; color: var(--krec); }
+  .fuss-unter { font-size: 15px; }
+  .fuss nav { display: flex; gap: 24px; flex-wrap: wrap; }
+  .fuss a { color: var(--ahar); }
+  .fuss a:hover { color: #fff; }
+</style>

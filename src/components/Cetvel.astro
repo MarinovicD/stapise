@@ -1,0 +1,21 @@
+---
+/** Cetvel: die gestaffelten Rahmenlinien osmanischer Kalligraphie-Blätter.
+ *  Umrahmt Fotos, ohne etwas vom Foto zu verdecken. */
+interface Props { dunkel?: boolean; klein?: boolean }
+const { dunkel = false, klein = false } = Astro.props;
+---
+<div class:list={['cetvel', { 'cetvel--klein': klein }]}>
+  <div class="c1"><div class="c2"><div class="c3"><div class:list={['c4', { dunkel }]}><slot /></div></div></div></div>
+</div>
+
+<style>
+  .cetvel { background: var(--ahar); padding: 14px; height: 100%; }
+  .c1 { border: 3px solid var(--varak); padding: 4px; height: 100%; }
+  .c2 { border: 1px solid var(--cilim); height: 100%; }
+  .c3 { border: 8px solid var(--lapis); height: 100%; }
+  .c4 { border: 2px solid var(--varak); height: 100%; overflow: hidden; position: relative; }
+  .c4.dunkel { background: #2A211B; }
+  .cetvel--klein { padding: 8px; }
+  .cetvel--klein .c1 { border-width: 2px; padding: 3px; }
+  .cetvel--klein .c3 { border-width: 5px; }
+</style>

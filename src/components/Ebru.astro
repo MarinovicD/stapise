@@ -1,0 +1,23 @@
+---
+/** Ebru-Streifen (Marmorpapier) – für Kopf, Fuß und Ränder. */
+interface Props { variante?: 'lapis' | 'sepia'; hoehe?: number; position?: 'oben' | 'unten' }
+const { variante = 'lapis', hoehe = 14, position = 'oben' } = Astro.props;
+const bild = `${import.meta.env.BASE_URL}textures/ebru-${variante}.webp`;
+---
+<div
+  class:list={['ebru', `ebru--${position}`]}
+  style={`--ebru-bild:url('${bild}');--ebru-hoehe:${hoehe}px`}
+  aria-hidden="true"
+></div>
+
+<style>
+  .ebru {
+    height: var(--ebru-hoehe);
+    background-image: var(--ebru-bild);
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+  }
+  .ebru--oben { border-bottom: 2px solid var(--varak); box-shadow: 0 3px 0 -1px var(--krec), 0 4px 0 -1px var(--cilim); }
+  .ebru--unten { border-top: 2px solid var(--varak); }
+</style>

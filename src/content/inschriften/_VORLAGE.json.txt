@@ -1,0 +1,35 @@
+{
+  "status": "entwurf",
+  "inventarnummer": "SP-0000",
+  "titel": { "bs": "", "de": "", "en": "" },
+  "art": "moschee",
+  "ort": {
+    "stadt": "",
+    "bauwerk": "",
+    "position": "",
+    "lat": 43.0000,
+    "lng": 18.0000,
+    "genauigkeit": "exakt"
+  },
+  "sprachen": ["arabisch"],
+  "schrift": "",
+  "traeger": "",
+  "material": "",
+  "datierung": { "hidschri": null, "gregorianisch": null, "chronogramm": false },
+  "stifter": "",
+  "kalligraph": "",
+  "zustand": "",
+  "zeilen": [
+    {
+      "original": "",
+      "transliteration": "",
+      "uebersetzung": { "bs": "", "de": "", "en": "" }
+    }
+  ],
+  "kommentar": { "bs": "", "de": "" },
+  "fotos": [
+    { "datei": "dateiname.webp", "alt": "Kurze Bildbeschreibung", "fotograf": "", "jahr": 2026, "lizenz": "CC BY 4.0" }
+  ],
+  "literatur": [],
+  "erfasst": "2026-01-01"
+}

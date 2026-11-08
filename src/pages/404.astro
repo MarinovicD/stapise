@@ -1,0 +1,18 @@
+---
+import Basis from '../layouts/Basis.astro';
+import { url } from '../lib/konstanten';
+---
+<Basis titel="Stranica nije pronađena">
+  <div class="prazno">
+    <span class="talik" lang="ar">؟</span>
+    <h1>Šta piše? Ovdje – ništa.</h1>
+    <p>Ova stranica ne postoji. <a href={url('')}>Nazad na kartu</a></p>
+  </div>
+</Basis>
+
+<style>
+  .prazno { padding: 80px var(--rand); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .talik { font-size: 90px; color: var(--varak); line-height: 1.4; }
+  h1 { font-size: 48px; }
+  p { margin: 0; }
+</style>

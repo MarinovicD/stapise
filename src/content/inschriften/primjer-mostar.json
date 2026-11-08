@@ -1,0 +1,59 @@
+{
+  "status": "beispiel",
+  "inventarnummer": "SP-0001",
+  "titel": {
+    "bs": "Primjer: natpis nad ulazom džamije",
+    "de": "Beispiel: Inschrift über dem Moscheeeingang",
+    "en": "Example: inscription above a mosque entrance"
+  },
+  "art": "moschee",
+  "ort": {
+    "stadt": "Mostar",
+    "bauwerk": "[Naziv džamije]",
+    "position": "iznad glavnog ulaza",
+    "lat": 43.3378,
+    "lng": 17.8150,
+    "genauigkeit": "ungefaehr"
+  },
+  "sprachen": ["arabisch"],
+  "schrift": "[Vrsta pisma]",
+  "traeger": "kamena ploča",
+  "material": "kamen",
+  "datierung": { "hidschri": null, "gregorianisch": null, "anzeige": "[datum]" },
+  "zeilen": [
+    {
+      "original": "بسم الله الرحمن الرحیم",
+      "transliteration": "Bismi llāhi r-raḥmāni r-raḥīm",
+      "uebersetzung": {
+        "bs": "U ime Allaha, Milostivog, Samilosnog.",
+        "de": "Im Namen Gottes, des Allerbarmers, des Barmherzigen.",
+        "en": "In the name of God, the Most Gracious, the Most Merciful."
+      }
+    },
+    {
+      "original": "لا اله الا الله محمد رسول الله",
+      "transliteration": "Lā ilāha illā llāhu Muḥammadun rasūlu llāh",
+      "uebersetzung": {
+        "bs": "Nema boga osim Allaha, Muhammed je Allahov poslanik.",
+        "de": "Es gibt keinen Gott außer Gott, Muhammad ist der Gesandte Gottes.",
+        "en": "There is no god but God, Muhammad is the Messenger of God."
+      }
+    },
+    {
+      "original": "ما شاء الله",
+      "transliteration": "Mā šāʾa llāh",
+      "uebersetzung": {
+        "bs": "Ono što Allah hoće.",
+        "de": "Was Gott will.",
+        "en": "What God wills."
+      }
+    }
+  ],
+  "kommentar": {
+    "bs": "Ovo je primjer zapisa. Tekst se sastoji od uobičajenih formula, a lokacija i podaci nisu stvarni.",
+    "de": "Dies ist ein Beispieleintrag. Der Text besteht aus gängigen Formeln, Ort und Angaben sind nicht echt."
+  },
+  "fotos": [],
+  "literatur": [],
+  "erfasst": "2026-11-08"
+}

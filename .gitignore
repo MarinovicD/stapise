@@ -1,0 +1,13 @@
+# Abhängigkeiten und Build
+node_modules/
+dist/
+.astro/
+
+# Originalfotos gehören NICHT ins Repository (nur die Web-Versionen in public/fotos/)
+fotos-original/*
+!fotos-original/LIESMICH.txt
+
+# System
+.DS_Store
+Thumbs.db
+.env
