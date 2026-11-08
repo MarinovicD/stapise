@@ -245,7 +245,7 @@ def einheitlich(alle):
 
 
 def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
-    rot, tinte = '#B23A2B', '#2A1A12'
+    rot, tinte = '#A8473A', '#2A1A12'
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">',
            '<defs>',
            # Maske: Außengrenze ausblenden (die goldene Landesgrenze kommt aus der Grundkarte)
@@ -263,15 +263,14 @@ def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
     # zarte Flächenfarben wie im Atlas
     for k, s, d in teile:
         out.append(f'<path d="{d}" fill="{s["farbe"]}" fill-opacity="0.55" fill-rule="evenodd"/>')
-    # rote Sancak-Grenzen: heller Saum + rote Linie
-    out.append('<g mask="url(#innen)" fill="none" stroke-linejoin="round">')
+    # Sancak-Grenzen: weich, schmal, leicht verwischt
+    out.append('<filter id="weich"><feGaussianBlur stdDeviation="1.1"/></filter>')
+    out.append(f'<g mask="url(#innen)" fill="none" stroke-linejoin="round" filter="url(#weich)">')
     for k, s, d in teile:
-        out.append(f'<path d="{d}" stroke="#F6E9CF" stroke-width="7" stroke-opacity="0.8"/>')
-    for k, s, d in teile:
-        out.append(f'<path d="{d}" stroke="{rot}" stroke-width="3.2"/>')
+        out.append(f'<path d="{d}" stroke="{rot}" stroke-width="2.6" stroke-opacity="0.45"/>')
     out.append('</g>')
     # Kalligraphie (Nesih), gerade gesetzt
-    out.append(f'<g fill="{tinte}" fill-opacity="0.86" filter="url(#kalem)">')
+    out.append(f'<g fill="{tinte}" fill-opacity="0.5" filter="url(#kalem)">')
     for k, text, groesse, winkel, x, y in beschriftungen:
         out.append(
             f'<text class="sancak" x="{x:.1f}" y="{y:.1f}" transform="rotate({winkel:.1f} {x:.1f} {y:.1f})" '

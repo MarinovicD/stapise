@@ -5,7 +5,7 @@
  *   umgefärbt in die Farben der Stilrichtung. Fällt der Dienst aus, bleibt eine
  *   schlichte Karte aus eigenen Daten (Landesgrenze) stehen.
  * - Markierungen: als Bild-Ebenen direkt in der Karte gezeichnet (Spitzbogen =
- *   einzelne Inschrift, Şemse-Medaillon = Gruppe). So bewegen sie sich beim
+ *   einzelne Inschrift, schlichter Kreis mit Anzahl = Gruppe). So bewegen sie sich beim
  *   Verschieben, Zoomen und Drehen exakt mit der Karte mit.
  * - Kompassrose als Nordausrichtung: dreht sich mit, ein Klick richtet nach Norden aus.
  */
@@ -172,22 +172,17 @@ const pinSvg = (farbe: string, gross = false) => {
     <circle cy="-21" r="3.6" fill="${F.krec}"/></svg>`;
 };
 
-const semseSvg = () => {
-  const blaetter = Array.from({ length: 12 }, (_, i) => {
-    const a = (i * Math.PI) / 6;
-    return `<circle cx="${(26 * Math.cos(a)).toFixed(1)}" cy="${(26 * Math.sin(a)).toFixed(1)}" r="7"/>`;
-  }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="-34 -34 68 68">
-    <g fill="${F.varak}">${blaetter}<circle r="26"/></g>
-    <circle r="21" fill="${F.krec}"/><circle r="18" fill="none" stroke="${F.cilim}" stroke-width="1"/></svg>`;
-};
+/** Gruppe mehrerer Inschriften: schlichter Kreis in Nussholz mit feinem Goldring */
+const gruppeSvg = () => `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="-16 -16 32 32">
+    <circle r="14.5" fill="none" stroke="${F.varak}" stroke-width="1" opacity="0.9"/>
+    <circle r="12" fill="${F.orah}" fill-opacity="0.92"/></svg>`;
 
 async function ladeBilder(map: MLMap) {
   const auftraege: Promise<void>[] = Object.entries(GRUPPEN).map(async ([id, g]) => {
     map.addImage(`pin-${id}`, await svgBild(pinSvg(g.farbe)), { pixelRatio: 2 });
   });
   auftraege.push(svgBild(pinSvg(F.lapis, true)).then((i) => map.addImage('pin-odabran', i, { pixelRatio: 2 })));
-  auftraege.push(svgBild(semseSvg()).then((i) => map.addImage('semse', i, { pixelRatio: 2 })));
+  auftraege.push(svgBild(gruppeSvg()).then((i) => map.addImage('gruppe', i, { pixelRatio: 2 })));
   await Promise.all(auftraege);
 }
 
@@ -281,17 +276,18 @@ export async function starteKarte() {
     await ladeBilder(map);
     map.addSource('natpisi', { type: 'geojson', data: daten, cluster: true, clusterRadius: 55, clusterMaxZoom: 13 });
 
-    // Gruppen: Şemse-Medaillon mit Anzahl
+    // Gruppen: schlichter Kreis mit Anzahl
     map.addLayer({
       id: 'natpisi-grupe', type: 'symbol', source: 'natpisi', filter: ['has', 'point_count'],
       layout: {
-        'icon-image': 'semse', 'icon-allow-overlap': true, 'icon-size': 0.95,
+        'icon-image': 'gruppe', 'icon-allow-overlap': true,
+        'icon-size': ['interpolate', ['linear'], ['get', 'point_count'], 2, 0.85, 20, 1.15] as any,
         ...(hatSchrift ? {
           'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Bold'],
-          'text-size': 15, 'text-allow-overlap': true,
+          'text-size': 12, 'text-allow-overlap': true,
         } : {}),
       },
-      paint: { 'text-color': F.orah },
+      paint: { 'text-color': F.krec },
     });
     // Einzelne Inschriften: Spitzbogen in der Farbe der Gruppe
     map.addLayer({
