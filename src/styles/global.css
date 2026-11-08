@@ -30,6 +30,8 @@
   --f-text: 'EB Garamond', Georgia, serif;
   --f-talik: 'Noto Nastaliq Urdu', 'Amiri', serif;
   --f-nesih: 'Amiri', 'Noto Naskh Arabic', serif;
+  /* Arebica-Ansicht: Scheherazade New (enthält alle Arebica-Zeichen, sehr gut lesbar) */
+  --f-arebica: 'Scheherazade New', 'Amiri', serif;
 
   /* Maße */
   --rand: clamp(16px, 4vw, 72px);
@@ -128,10 +130,10 @@ button, input, select { font: inherit; color: inherit; }
 
 /* ---------- Arebica ---------- */
 html.pismo-ceka body > * { visibility: hidden; }
-html[data-pismo='arebica'] body { font-family: var(--f-nesih); font-size: 20px; line-height: 1.75; }
+html[data-pismo='arebica'] body { font-family: var(--f-arebica); font-size: 21px; line-height: 1.75; }
 html[data-pismo='arebica'] h1,
 html[data-pismo='arebica'] h2,
-html[data-pismo='arebica'] h3 { font-family: var(--f-nesih); font-weight: 700; line-height: 1.5; }
+html[data-pismo='arebica'] h3 { font-family: var(--f-arebica); font-weight: 700; line-height: 1.5; }
 html[data-pismo='arebica'] .label { letter-spacing: 0; text-transform: none; font-size: 15px; }
 /* Fremdsprachen und Lateinschrift bleiben links-nach-rechts in der Lateinschrift */
 html[data-pismo='arebica'] :is([lang='de'], [lang='en'], [lang='tr'], [lang='ota-Latn'], .latinica) {

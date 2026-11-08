@@ -45,10 +45,10 @@ export const KONSONANTEN: Record<string, string> = {
 };
 
 /** Vokale – je nach Stellung im Wort verschieden */
-export const VOKALE: Record<string, { anfang: string; sonst: string }> = {
+export const VOKALE: Record<string, { anfang: string; sonst: string; mitte?: string }> = {
   a: { anfang: 'آ', sonst: 'ا' },            // Elif mit Medde am Anfang, sonst Elif
   e: { anfang: 'ئ', sonst: 'ە' },            // Hemze auf Zacke; sonst nicht verbindendes He
-  i: { anfang: 'اٖ', sonst: 'ى' },            // Elif mit Elif Hançeri darunter; sonst Elif Maksura (ohne Punkte)
+  i: { anfang: 'اٖ', mitte: 'ي', sonst: 'ى' }, // Anfang: Elif mit Elif Hançeri; Mitte: Ye mit Punkten; Ende: Elif Maksura
   o: { anfang: 'اۉ', sonst: 'ۉ' },           // Vav mit umgedrehtem kleinem v  (Anfang: vorläufig)
   u: { anfang: 'اۆ', sonst: 'ۆ' },           // Vav mit kleinem v              (Anfang: vorläufig)
 };
@@ -84,7 +84,10 @@ function wortUmwandeln(wort: string): string {
     const zwei = wort.slice(i, i + 2);
     if (DIGRAPHE[zwei]) { aus += DIGRAPHE[zwei]; i += 2; continue; }
     const z = wort[i];
-    if (VOKALE[z]) aus += i === 0 ? VOKALE[z].anfang : VOKALE[z].sonst;
+    if (VOKALE[z]) {
+      const v = VOKALE[z];
+      aus += i === 0 ? v.anfang : (i < wort.length - 1 && v.mitte) ? v.mitte : v.sonst;
+    }
     else if (KONSONANTEN[z]) aus += KONSONANTEN[z];
     else aus += z;
     i++;

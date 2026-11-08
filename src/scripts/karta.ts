@@ -16,6 +16,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import bih from '../data/bih.json';
 import { GRUPPEN, ART_LABEL, SPRACHE_LABEL, type Gruppe, type Art, type Sprache } from '../lib/konstanten';
+import { uArebicu } from '../lib/arebica';
 
 const STIL_URL = 'https://tiles.openfreemap.org/styles/positron';
 
@@ -217,6 +218,88 @@ class Kompass implements maplibregl.IControl {
   onRemove() { this.map?.off('rotate', this.drehen); }
 }
 
+/* ---------- Ortsnamen in Arebica ---------- */
+
+/** Größe der Beschriftung (CSS-Pixel) je Klasse: 1 Stadt · 2 Kleinstadt · 3 Dorf */
+const ORT_GROESSE: Record<number, number> = { 1: 21, 2: 17, 3: 14 };
+const ORT_SCHRIFT = '"Scheherazade New", "Amiri", serif';
+
+/** Zeichnet einen Ortsnamen in Arebica als Bild (der Browser übernimmt die arabische Satztechnik). */
+function ortsBild(name: string, klasse: number): ImageData {
+  const px = 2; // doppelte Auflösung für scharfe Schrift
+  const groesse = ORT_GROESSE[klasse] * px;
+  const text = uArebicu(name);
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d')!;
+  const schrift = `${klasse === 3 ? 400 : 700} ${groesse}px ${ORT_SCHRIFT}`;
+  ctx.font = schrift;
+  const breite = Math.ceil(ctx.measureText(text).width) + 8 * px;
+  const hoehe = Math.ceil(groesse * 1.7);
+  c.width = breite; c.height = hoehe;
+  ctx.font = schrift;
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(243,236,221,0.92)';
+  ctx.lineWidth = 3.5 * px;
+  ctx.strokeText(text, breite / 2, hoehe / 2);
+  ctx.fillStyle = klasse === 3 ? '#4A3A2C' : F.orah;
+  ctx.fillText(text, breite / 2, hoehe / 2);
+  return ctx.getImageData(0, 0, breite, hoehe);
+}
+
+async function arebicaOrte(map: MLMap) {
+  const res = await fetch(`${import.meta.env.BASE_URL}data/mjesta.json`);
+  const { orte } = (await res.json()) as { orte: [number, number, number, string][] };
+  await document.fonts.load(`700 20px ${ORT_SCHRIFT}`, 'آ').catch(() => {});
+  map.addSource('mjesta', {
+    type: 'geojson',
+    data: {
+      type: 'FeatureCollection',
+      features: orte.map(([lon, lat, klasse, name], i) => ({
+        type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
+        properties: { id: i, klasse, name },
+      })),
+    },
+  });
+  // Bilder erst erzeugen, wenn die Karte sie braucht
+  (map as any).setMissingStyleImageResolver((id: string) => {
+    if (!id.startsWith('mjesto-')) return;
+    const ort = orte[+id.slice(7)];
+    if (ort && !map.hasImage(id)) map.addImage(id, ortsBild(ort[3], ort[2]), { pixelRatio: 2 });
+  });
+  const ebene = (id: string, klasse: number, minzoom: number) => map.addLayer({
+    id, type: 'symbol', source: 'mjesta', minzoom,
+    filter: ['==', ['get', 'klasse'], klasse],
+    layout: {
+      visibility: 'none',
+      'icon-image': ['concat', 'mjesto-', ['to-string', ['get', 'id']]],
+      'icon-allow-overlap': false,
+      'icon-padding': 4,
+      'symbol-sort-key': ['get', 'id'],
+    },
+  }, 'natpisi-grupe');
+  ebene('mjesta-sela', 3, 9);
+  ebene('mjesta-gradici', 2, 7);
+  ebene('mjesta-gradovi', 1, 4);
+}
+
+/** Zwischen lateinischen und Arebica-Ortsnamen umschalten (nur innerhalb Bosniens). */
+function ortsnamenSchrift(map: MLMap, arebica: boolean, originalFilter: Map<string, any>) {
+  const grenze = (bih as any).features[0].geometry;
+  for (const l of map.getStyle().layers) {
+    if ((l as any)['source-layer'] !== 'place' || l.id.startsWith('label_country')) continue;
+    if (!originalFilter.has(l.id)) originalFilter.set(l.id, (l as any).filter ?? null);
+    const orig = originalFilter.get(l.id);
+    const ausserhalb = ['!', ['within', grenze]];
+    map.setFilter(l.id, arebica ? (orig ? ['all', orig, ausserhalb] : ausserhalb) : orig);
+  }
+  for (const id of ['mjesta-sela', 'mjesta-gradici', 'mjesta-gradovi']) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', arebica ? 'visible' : 'none');
+  }
+}
+
 /* ---------- Vorschau-Panel ---------- */
 
 function $(id: string) { return document.getElementById(id)!; }
@@ -281,7 +364,7 @@ export async function starteKarte() {
     map.addLayer({
       id: 'natpisi-grupe', type: 'symbol', source: 'natpisi', filter: ['has', 'point_count'],
       layout: {
-        'icon-image': 'gruppe', 'icon-allow-overlap': true,
+        'icon-image': 'gruppe', 'icon-allow-overlap': true, 'icon-ignore-placement': true,
         'icon-size': ['interpolate', ['linear'], ['get', 'point_count'], 2, 0.85, 20, 1.15] as any,
         ...(hatSchrift ? {
           'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Bold'],
@@ -295,7 +378,7 @@ export async function starteKarte() {
       id: 'natpisi-tacke', type: 'symbol', source: 'natpisi', filter: ['!', ['has', 'point_count']],
       layout: {
         'icon-image': ['concat', 'pin-', ['get', 'gruppe']], 'icon-anchor': 'bottom',
-        'icon-allow-overlap': true,
+        'icon-allow-overlap': true, 'icon-ignore-placement': true,
       },
     });
     // Ausgewählte Inschrift: größer, in Lapis
@@ -328,6 +411,15 @@ export async function starteKarte() {
     });
 
     ladeAnzeige?.remove();
+
+    // Ortsnamen in Arebica (wenn die Seite auf Arebica steht)
+    try {
+      await arebicaOrte(map);
+      const filter = new Map<string, any>();
+      const setze = () => ortsnamenSchrift(map, document.documentElement.dataset.pismo === 'arebica', filter);
+      setze();
+      window.addEventListener('pismo', setze);
+    } catch (e) { console.warn('Arebica-Ortsnamen nicht verfügbar', e); }
   });
 
   /* Vorschau schließen */

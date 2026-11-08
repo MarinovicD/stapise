@@ -93,3 +93,12 @@ Die Schicht ist neu gezeichnet; der Scan selbst wird nicht veröffentlicht. Neu 
 python3 scripts/osmanska-karta/erzeuge.py PFAD/ZUM/SCAN.jpg
 python3 scripts/osmanska-karta/rendern.py
 ```
+
+## Arebica
+
+Oben auf jeder Seite lässt sich zwischen **Latinica** und **Arebica** umschalten. Die Buchstabentabelle steht in `src/lib/arebica.ts`. Eine Änderung dort wirkt auf die ganze Seite und auf die Ortsnamen der Karte. Schrift für Arebica: Scheherazade New.
+
+Die Ortsnamen Bosniens für die Karte stammen aus OpenStreetMap und werden einmalig abgerufen:
+```
+node scripts/ortsnamen.mjs
+```
