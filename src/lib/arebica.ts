@@ -6,7 +6,7 @@
  * wirkt auf die ganze Seite (und später auf die Ortsnamen der Karte).
  *
  * Festgelegt vom Projektinhaber am 08.11.2026.
- * Noch offen (vorläufig): o und u am Wortanfang, k, f, p, r, s, š, t (Vorschlag übernommen).
+ * Noch offen (vorläufig): o und u am Wortanfang; f, p, r, s, š, t (Vorschlag übernommen).
  */
 
 /** Zweibuchstabige Laute – werden vor den Einzelbuchstaben geprüft */
@@ -28,7 +28,7 @@ export const KONSONANTEN: Record<string, string> = {
   g: 'غ',
   h: 'ح',
   j: 'ي',          // Ye mit Punkten (auch am Wortende)
-  k: 'ك',
+  k: 'ق',          // Kaf
   l: 'ل',
   m: 'م',
   n: 'ن',
@@ -41,14 +41,14 @@ export const KONSONANTEN: Record<string, string> = {
   z: 'ز',
   'ž': 'ژ',
   // Fremdbuchstaben, falls sie vorkommen
-  q: 'ك', w: 'و', x: 'كس', y: 'ي',
+  q: 'ق', w: 'و', x: 'قس', y: 'ي',
 };
 
 /** Vokale – je nach Stellung im Wort verschieden */
 export const VOKALE: Record<string, { anfang: string; sonst: string }> = {
   a: { anfang: 'آ', sonst: 'ا' },            // Elif mit Medde am Anfang, sonst Elif
   e: { anfang: 'ئ', sonst: 'ە' },            // Hemze auf Zacke; sonst nicht verbindendes He
-  i: { anfang: 'اٖ', sonst: 'ىٖ' },           // Elif bzw. punktloses Ye, jeweils mit Elif Hançeri darunter
+  i: { anfang: 'اٖ', sonst: 'ى' },            // Elif mit Elif Hançeri darunter; sonst Elif Maksura (ohne Punkte)
   o: { anfang: 'اۉ', sonst: 'ۉ' },           // Vav mit umgedrehtem kleinem v  (Anfang: vorläufig)
   u: { anfang: 'اۆ', sonst: 'ۆ' },           // Vav mit kleinem v              (Anfang: vorläufig)
 };
@@ -57,14 +57,17 @@ export const REGELN = {
   /** Satzzeichen ersetzen. Klammern: verzierte arabische Klammern, weil die Schrift
    *  normale Klammern beim Wechsel der Schreibrichtung doppelt spiegelt. */
   satzzeichen: { ',': '،', '?': '؟', ';': '؛', '(': '﴾', ')': '﴿' } as Record<string, string>,
-  /** Ziffern: 'lateinisch' (123) oder 'arabisch' (١٢٣) – noch offen */
-  ziffern: 'lateinisch' as 'lateinisch' | 'arabisch',
+  /** Ziffern: 'lateinisch' (123) oder 'arabisch' (١٢٣) */
+  ziffern: 'arabisch' as 'lateinisch' | 'arabisch',
 };
 
 /** Feste Schreibweisen für einzelne Wörter (klein geschrieben, ohne Satzzeichen) */
-export const AUSNAHMEN: Record<string, string> = {
-  // Beispiel – noch vom Projektinhaber festzulegen:
-  // allah: 'الله',
+export const AUSNAHMEN: Record<string, string> = {};
+
+/** Wortanfänge mit fester Schreibweise; die bosnische Endung wird normal angehängt
+ *  (Allaha → الله + ا, Allahov → الله + ۉو) */
+export const PRAEFIXE: Record<string, string> = {
+  allah: 'الله',
 };
 
 const ARABISCHE_ZIFFERN = '٠١٢٣٤٥٦٧٨٩';
@@ -74,6 +77,9 @@ function wortUmwandeln(wort: string): string {
   if (AUSNAHMEN[wort]) return AUSNAHMEN[wort];
   let aus = '';
   let i = 0;
+  for (const [praefix, fest] of Object.entries(PRAEFIXE)) {
+    if (wort.startsWith(praefix)) { aus = fest; i = praefix.length; break; }
+  }
   while (i < wort.length) {
     const zwei = wort.slice(i, i + 2);
     if (DIGRAPHE[zwei]) { aus += DIGRAPHE[zwei]; i += 2; continue; }

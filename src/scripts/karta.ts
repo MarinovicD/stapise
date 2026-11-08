@@ -122,7 +122,7 @@ function bihEbenen(map: MLMap) {
   map.addLayer({ id: 'svijet-maska', type: 'fill', source: 'maske', paint: { 'fill-color': F.krec, 'fill-opacity': ausblenden(0.6) } }, ersteSchrift);
 
   // Osmanische Zierschicht (Sancaks um 1900, kalligraphisch beschriftet):
-  // liegt in der Übersicht über der Karte und verschwindet beim Hineinzoomen.
+  // liegt zurückhaltend über der Karte und blendet erst in der Detailansicht aus.
   map.addSource('osmanska', {
     type: 'image',
     url: `${import.meta.env.BASE_URL}karte/osmanska-zierschicht.webp`,
@@ -131,7 +131,7 @@ function bihEbenen(map: MLMap) {
   map.addLayer({
     id: 'osmanska-zierschicht', type: 'raster', source: 'osmanska',
     paint: {
-      'raster-opacity': ['interpolate', ['linear'], ['zoom'], 7.5, 0.9, 9, 0] as any,
+      'raster-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 10.5, 0] as any,
       'raster-fade-duration': 0,
     },
   }, ersteSchrift);
@@ -350,6 +350,7 @@ export async function starteKarte() {
     );
     (map.getSource('natpisi') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: treffer });
     $('brojac').textContent = String(treffer.length);
+    (window as any).stapisePretvori?.($('brojac'));
     if (ausgewaehlt && !treffer.some((t) => t.properties.id === ausgewaehlt)) $('p-zatvori').click();
   }
   document.querySelectorAll('.filter input').forEach((i) => i.addEventListener('input', filtern));

@@ -248,10 +248,9 @@ def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
     rot, tinte = '#A8473A', '#2A1A12'
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">',
            '<defs>',
-           # Maske: Außengrenze ausblenden (die goldene Landesgrenze kommt aus der Grundkarte)
-           f'<mask id="innen"><rect width="{w}" height="{h}" fill="white"/>'
-           + ''.join(f'<path d="{p}" fill="none" stroke="black" stroke-width="18" stroke-linejoin="round"/>' for p in bih_pfade)
-           + '</mask>']
+           '<clipPath id="land">' + ''.join(f'<path d="{p}"/>' for p in bih_pfade) + '</clipPath>',
+           # Flächen laufen an den Sancak-Grenzen weich ineinander
+           '<filter id="verlauf" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="26"/></filter>']
     # Tintenwirkung: leicht unruhige Ränder wie mit dem Kalem geschrieben
     out.append('<filter id="kalem" x="-5%" y="-30%" width="110%" height="160%">'
                '<feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="5" result="r"/>'
@@ -260,15 +259,13 @@ def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
                '<feComponentTransfer in="b"><feFuncA type="linear" slope="1.25" intercept="-0.05"/></feComponentTransfer>'
                '</filter>')
     out.append('</defs>')
-    # zarte Flächenfarben wie im Atlas
+    # zarte Flächenfarben wie im Atlas, ohne Grenzlinien, ineinander verlaufend
+    out.append('<g clip-path="url(#land)" opacity="0.55">')
+    out.append(''.join(f'<path d="{p}" fill="#E6D4B0"/>' for p in bih_pfade))
+    out.append('<g filter="url(#verlauf)">')
     for k, s, d in teile:
-        out.append(f'<path d="{d}" fill="{s["farbe"]}" fill-opacity="0.55" fill-rule="evenodd"/>')
-    # Sancak-Grenzen: weich, schmal, leicht verwischt
-    out.append('<filter id="weich"><feGaussianBlur stdDeviation="1.1"/></filter>')
-    out.append(f'<g mask="url(#innen)" fill="none" stroke-linejoin="round" filter="url(#weich)">')
-    for k, s, d in teile:
-        out.append(f'<path d="{d}" stroke="{rot}" stroke-width="2.6" stroke-opacity="0.45"/>')
-    out.append('</g>')
+        out.append(f'<path d="{d}" fill="{s["farbe"]}" fill-rule="evenodd"/>')
+    out.append('</g></g>')
     # Kalligraphie (Nesih), gerade gesetzt
     out.append(f'<g fill="{tinte}" fill-opacity="0.5" filter="url(#kalem)">')
     for k, text, groesse, winkel, x, y in beschriftungen:
