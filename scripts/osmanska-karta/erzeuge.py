@@ -30,14 +30,17 @@ from skimage.measure import find_contours, approximate_polygon
 HIER = Path(__file__).resolve().parent
 PROJEKT = HIER.parent.parent
 
-# --- Sancaks: Name (bitte prüfen!), Saatpunkt im Scan (x, y), Farbton ------------
+# --- Sancaks: Name, Saatpunkt im Scan (x, y), Farbton ------------------------------
+# Kaschida (ـ) nur dort, wo die Schrift sie geschwungen setzt: vor einem Elif.
+# Vor anderen Buchstaben wird sie zum geraden Strich – das wollen wir nicht.
+K = '\u0640' * 3
 SANCAKS = {
-    'bihke':    {'name': 'بهكه سنجاغی',      'saat': (200, 330),  'farbe': '#E8C9A8'},
-    'banaluka': {'name': 'بنالوقه سنجاغی',   'saat': (520, 360),  'farbe': '#D9DDB0'},
-    'izvornik': {'name': 'ازوورنیق سنجاغی',   'saat': (900, 500),  'farbe': '#EFD9A6'},
-    'travnik':  {'name': 'تراونیك سنجاغی',    'saat': (420, 600),  'farbe': '#E9C4BE'},
-    'bosna':    {'name': 'بوسنه سنجاغی',      'saat': (900, 800),  'farbe': '#CFDDB8'},
-    'hersek':   {'name': 'هرسك سنجاغی',       'saat': (750, 1050), 'farbe': '#EAD7B0'},
+    'bihke':    {'name': 'بهكه سنجاغی', 'kaschida': 'بهكه سنج' + K + 'اغی',      'saat': (200, 330),  'farbe': '#E8C9A8'},
+    'banaluka': {'name': 'بنالوقه سنجاغی', 'kaschida': 'بن' + K + 'الوقه سنج' + K + 'اغی',   'saat': (520, 360),  'farbe': '#D9DDB0'},
+    'izvornik': {'name': 'ازوورنیق سنجاغی', 'kaschida': 'ازوورنیق سنج' + K + 'اغی',   'saat': (900, 500),  'farbe': '#EFD9A6'},
+    'travnik':  {'name': 'تراونیك سنجاغی', 'kaschida': 'تراونیك سنج' + K + 'اغی',    'saat': (420, 600),  'farbe': '#E9C4BE'},
+    'bosna':    {'name': 'بوسنه سنجاغی', 'kaschida': 'بوسنه سنج' + K + 'اغی',      'saat': (900, 800),  'farbe': '#CFDDB8'},
+    'hersek':   {'name': 'هرسك سنجاغی', 'kaschida': 'هرسك سنج' + K + 'اغی',       'saat': (750, 1050), 'farbe': '#EAD7B0'},
 }
 
 # Punkte AUSSERHALB des Vilayets (Österreich-Ungarn, Dalmatien, Serbien, Montenegro, Meer).
@@ -138,7 +141,7 @@ def main(scan_pfad):
         # Beschriftung nur am größten zusammenhängenden Teil ausrichten
         teile_lab, n = ndi.label(maske)
         groesster = teile_lab == (np.argmax(np.bincount(teile_lab.ravel())[1:]) + 1)
-        beschriftungen.append((schluessel, s['name'], *beschriftungs_bogen(groesster)))
+        beschriftungen.append((schluessel, *beste_beschriftung(groesster, s)))
 
     schreibe_svg(teile, beschriftungen, bih_pfade, BREITE, hoehe_px)
     meta = {'coordinates': [[LON0, LAT1], [LON1, LAT1], [LON1, LAT0], [LON0, LAT0]],
@@ -147,43 +150,88 @@ def main(scan_pfad):
     print('geschrieben:', HIER / 'zierschicht.svg', f'({BREITE}×{hoehe_px})')
 
 
-def beschriftungs_bogen(maske):
-    """Bogen entlang der Hauptachse des Gebiets (wie bei Europa Universalis)."""
-    yy, xx = np.nonzero(maske)
+SCHRIFT = HIER / 'schrift' / 'Amiri-Bold.ttf'
+BOX = 1.12          # Höhe der Schriftbox im Verhältnis zur Schriftgröße
+
+
+def textbreite(text):
+    """Breite pro Schriftgrad (Amiri Bold, echte arabische Satztechnik über Raqm)."""
+    from PIL import ImageFont
+    f = ImageFont.truetype(str(SCHRIFT), 100, layout_engine=ImageFont.Layout.RAQM)
+    return f.getlength(text, direction='rtl') / 100
+
+
+def groesstes_band(maske, verhaeltnis):
+    """Größte Höhe h, für die ein waagrechtes Rechteck h × (verhaeltnis·h) in die Maske passt
+    (binäre Suche). Gibt (h, mitte_y, mitte_x) zurück."""
+    H, W = maske.shape
+    lauf = np.zeros((H, W), np.int32)              # senkrechte Läufe, die in jeder Zeile enden
+    lauf[0] = maske[0]
+    for y in range(1, H):
+        lauf[y] = np.where(maske[y], lauf[y - 1] + 1, 0)
+
+    def passt(h):
+        ok = lauf >= h
+        r = np.zeros(H, np.int32)
+        best_len, best = 0, None
+        for x in range(W):                         # waagrechte Läufe, zeilenweise vektorisiert
+            r = (r + 1) * ok[:, x]
+            y = int(np.argmax(r))
+            if r[y] > best_len:
+                best_len, best = int(r[y]), (y, x)
+        if best_len >= verhaeltnis * h:
+            y, x = best
+            return (y - h / 2 + 0.5, x - best_len / 2 + 0.5)
+        return None
+
+    lo, hi, ergebnis = 4, int(lauf.max()), (0, 0, 0)
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        pos = passt(mid)
+        if pos:
+            ergebnis = (mid, *pos); lo = mid + 1
+        else:
+            hi = mid - 1
+    return ergebnis
+
+
+def beste_beschriftung(maske, s):
+    """Gerade Beschriftung an der flächigsten Stelle, entlang der Form des Gebiets."""
+    klein = 4                                            # Suche auf verkleinertem Raster
+    m = maske[::klein, ::klein]
+    m_innen = ndi.binary_erosion(m, iterations=3)          # Abstand zu den Grenzlinien
+    yy, xx = np.nonzero(m)
     pts = np.stack([xx, yy], 1).astype(float)
-    mitte = pts.mean(0)
-    cov = np.cov((pts - mitte).T)
-    werte, vek = np.linalg.eigh(cov)
-    achse = vek[:, 1]
-    if achse[0] < 0:
-        achse = -achse                     # Schrift nie kopfüber
-    quer = np.array([-achse[1], achse[0]])
-    u = (pts - mitte) @ achse
-    v = (pts - mitte) @ quer
-    # Querschnitte entlang der Achse
-    bins = np.linspace(u.min(), u.max(), 40)
-    mitten, dicken, us = [], [], []
-    for a, b in zip(bins[:-1], bins[1:]):
-        sel = (u >= a) & (u < b)
-        if sel.sum() < 20:
+    werte, vek = np.linalg.eigh(np.cov((pts - pts.mean(0)).T))
+    grund = math.degrees(math.atan2(vek[1, 1], vek[0, 1]))
+    kandidaten = []
+    for text in [s['name'], s.get('kaschida')]:
+        if not text:
             continue
-        lo, hi = np.percentile(v[sel], [5, 95])
-        us.append((a + b) / 2); mitten.append((lo + hi) / 2); dicken.append(hi - lo)
-    us, mitten, dicken = map(np.array, (us, mitten, dicken))
-    gut = dicken > 0.45 * dicken.max()
-    u_a, u_b = us[gut].min(), us[gut].max()
-    rand = 0.10 * (u_b - u_a)
-    u_a, u_b = u_a + rand, u_b - rand
-    # sanfter Bogen: Parabel durch die Querschnittsmitten, Krümmung begrenzt
-    koeff = np.polyfit(us[gut], mitten[gut], 2, w=dicken[gut])
-    koeff[0] = np.clip(koeff[0], -0.0012, 0.0012)
-    tt = np.linspace(u_a, u_b, 24)
-    vv = np.polyval(koeff, tt)
-    punkte = mitte + np.outer(tt, achse) + np.outer(vv, quer)
-    laenge = float(np.sum(np.hypot(*np.diff(punkte, axis=0).T)))
-    dicke = float(np.median(dicken[gut]))
-    pfad = 'M' + ' L'.join(f'{x:.1f} {y:.1f}' for x, y in punkte)
-    return pfad, laenge, dicke
+        verhaeltnis = textbreite(text) / BOX
+        for winkel in np.arange(grund - 35, grund + 36, 5):
+            w = ((winkel + 90) % 180) - 90               # nie kopfüber
+            gedreht = ndi.rotate(m_innen, w, reshape=True, order=0)
+            h, cy, cx = groesstes_band(gedreht, verhaeltnis * 1.08)
+            if h == 0:
+                continue
+            # Mittelpunkt zurück ins ungedrehte Raster
+            Hr, Wr = gedreht.shape
+            H0, W0 = m.shape
+            a = math.radians(w)
+            dx, dy = cx - Wr / 2, cy - Hr / 2
+            ox = math.cos(a) * dx - math.sin(a) * dy + W0 / 2
+            oy = math.sin(a) * dx + math.cos(a) * dy + H0 / 2
+            groesse = h * klein / BOX * 0.9
+            # bevorzugt: große Schrift, dann wenig Schräglage
+            wert = groesse - 0.05 * abs(w)
+            kandidaten.append((wert, text, groesse, w, ox * klein, oy * klein))
+    ohne = max(k for k in kandidaten if k[1] == s['name'])
+    mit = [k for k in kandidaten if k[1] != s['name']]
+    # Kaschida-Variante, wenn das Gebiet lang genug ist (Schrift höchstens 12 % kleiner)
+    wahl = max(mit) if mit and max(mit)[2] >= 0.88 * ohne[2] else ohne
+    _, text, groesse, w, x, y = wahl
+    return text, groesse, w, x, y
 
 
 def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
@@ -194,8 +242,13 @@ def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
            f'<mask id="innen"><rect width="{w}" height="{h}" fill="white"/>'
            + ''.join(f'<path d="{p}" fill="none" stroke="black" stroke-width="18" stroke-linejoin="round"/>' for p in bih_pfade)
            + '</mask>']
-    for k, _, pfad, *_ in beschriftungen:
-        out.append(f'<path id="bogen-{k}" d="{pfad}"/>')
+    # Tintenwirkung: leicht unruhige Ränder wie mit dem Kalem geschrieben
+    out.append('<filter id="kalem" x="-5%" y="-30%" width="110%" height="160%">'
+               '<feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="5" result="r"/>'
+               '<feDisplacementMap in="SourceGraphic" in2="r" scale="3" xChannelSelector="R" yChannelSelector="G" result="d"/>'
+               '<feGaussianBlur in="d" stdDeviation="0.5" result="b"/>'
+               '<feComponentTransfer in="b"><feFuncA type="linear" slope="1.25" intercept="-0.05"/></feComponentTransfer>'
+               '</filter>')
     out.append('</defs>')
     # zarte Flächenfarben wie im Atlas
     for k, s, d in teile:
@@ -207,15 +260,14 @@ def schreibe_svg(teile, beschriftungen, bih_pfade, w, h):
     for k, s, d in teile:
         out.append(f'<path d="{d}" stroke="{rot}" stroke-width="3.2"/>')
     out.append('</g>')
-    # Kalligraphie: Größe und Kaschida-Dehnung passt rendern.py im Browser an
-    for k, name, pfad, laenge, dicke in beschriftungen:
-        groesse = max(34, min(0.5 * dicke, 130))
+    # Kalligraphie (Nesih), gerade gesetzt
+    out.append(f'<g fill="{tinte}" fill-opacity="0.86" filter="url(#kalem)">')
+    for k, text, groesse, winkel, x, y in beschriftungen:
         out.append(
-            f'<text class="sancak" data-ziel="{laenge*0.82:.0f}" data-max="{groesse:.0f}" '
-            f'font-family="Amiri" font-weight="700" font-size="{groesse:.0f}" fill="{tinte}" '
-            f'fill-opacity="0.82" direction="rtl" text-anchor="middle" '
-            f'paint-order="stroke" stroke="#F6E9CF" stroke-width="{groesse*0.08:.1f}" stroke-opacity="0.6">'
-            f'<textPath href="#bogen-{k}" startOffset="50%">{name}</textPath></text>')
+            f'<text class="sancak" x="{x:.1f}" y="{y:.1f}" transform="rotate({winkel:.1f} {x:.1f} {y:.1f})" '
+            f'font-family="Amiri" font-weight="700" font-size="{groesse:.0f}" direction="rtl" '
+            f'text-anchor="middle" dominant-baseline="central">{text}</text>')
+    out.append('</g>')
     out.append('</svg>')
     (HIER / 'zierschicht.svg').write_text('\n'.join(out), encoding='utf-8')
 
