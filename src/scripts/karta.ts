@@ -4,8 +4,10 @@
  * - Grundkarte: OpenFreeMap (OpenStreetMap-Daten, kostenlos, ohne API-Schlüssel),
  *   umgefärbt in die Farben der Stilrichtung. Fällt der Dienst aus, bleibt eine
  *   schlichte Karte aus eigenen Daten (Landesgrenze) stehen.
- * - Markierungen: eigene HTML-Elemente (Spitzbogen = einzelne Inschrift,
- *   Şemse-Medaillon = Gruppe), damit sie exakt wie das Design aussehen.
+ * - Markierungen: als Bild-Ebenen direkt in der Karte gezeichnet (Spitzbogen =
+ *   einzelne Inschrift, Şemse-Medaillon = Gruppe). So bewegen sie sich beim
+ *   Verschieben, Zoomen und Drehen exakt mit der Karte mit.
+ * - Kompassrose als Nordausrichtung: dreht sich mit, ein Klick richtet nach Norden aus.
  */
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MLMap, StyleSpecification, GeoJSONSource } from 'maplibre-gl';
@@ -101,20 +103,6 @@ function maskeUmBiH(): GeoJSON.Feature {
   return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [aussen, ...loecher] } };
 }
 
-function gitterMuster(): ImageData {
-  const n = 24;
-  const c = document.createElement('canvas');
-  c.width = c.height = n;
-  const ctx = c.getContext('2d')!;
-  ctx.strokeStyle = 'rgba(176,138,62,0.45)';
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(n, n);
-  ctx.moveTo(n, 0); ctx.lineTo(0, n);
-  ctx.stroke();
-  return ctx.getImageData(0, 0, n, n);
-}
-
 function bihEbenen(map: MLMap) {
   const stil = map.getStyle();
   const ersteSchrift = stil.layers.find((l) => l.type === 'symbol')?.id;
@@ -123,13 +111,11 @@ function bihEbenen(map: MLMap) {
 
   map.addSource('bih', { type: 'geojson', data: bih as any });
   map.addSource('maske', { type: 'geojson', data: maskeUmBiH() });
-  map.addImage('musebak', gitterMuster(), { pixelRatio: 2 });
 
-  // Fläche und Abblendung der Nachbarländer: grobe Natural-Earth-Form,
+  // Abblendung der Nachbarländer: grobe Natural-Earth-Form,
   // daher nur in der Übersicht sichtbar und beim Hineinzoomen ausgeblendet.
   const ausblenden = (start: number) => ['interpolate', ['linear'], ['zoom'], 7, start, 8.5, 0] as any;
   map.addLayer({ id: 'svijet-maska', type: 'fill', source: 'maske', paint: { 'fill-color': F.krec, 'fill-opacity': ausblenden(0.6) } }, ersteSchrift);
-  map.addLayer({ id: 'bih-gitter', type: 'fill', source: 'bih', paint: { 'fill-pattern': 'musebak', 'fill-opacity': ausblenden(0.9) } }, ersteSchrift);
 
   if (osm) {
     // Grenzlinie exakt aus den OpenStreetMap-Daten der Grundkarte
@@ -150,34 +136,71 @@ function bihEbenen(map: MLMap) {
   }
 }
 
-/* ---------- Markierungen ---------- */
+/* ---------- Bilder für die Markierungen ---------- */
 
-function pinElement(p: Eigenschaften): HTMLButtonElement {
-  const farbe = GRUPPEN[p.gruppe]?.farbe ?? F.kamen;
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'sp-pin';
-  b.setAttribute('aria-label', `${p.titel}, ${p.stadt}`);
-  b.innerHTML = `<svg viewBox="-12 -42 24 44" width="24" height="44" aria-hidden="true">
-    <path d="M0 0 L-9 -14 Q-9 -30 0 -36 Q9 -30 9 -14 Z" fill="${farbe}" stroke="${F.krec}" stroke-width="2"/>
-    <circle cy="-19" r="3.2" fill="${F.krec}"/></svg>`;
-  return b;
+function svgBild(svg: string): Promise<HTMLImageElement> {
+  const img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  return img.decode().then(() => img);
 }
 
-function semseElement(anzahl: number): HTMLButtonElement {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'sp-semse';
-  b.setAttribute('aria-label', `${anzahl} natpisa – približi`);
+/** Spitzbogen-Markierung, doppelte Auflösung für scharfe Darstellung */
+const pinSvg = (farbe: string, gross = false) => {
+  const k = gross ? 1.3 : 1;
+  const b = Math.round(28 * k), h = Math.round(48 * k);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${b * 2}" height="${h * 2}" viewBox="-14 -46 28 48">
+    <path d="M0 0 L-10 -15 Q-10 -33 0 -40 Q10 -33 10 -15 Z" fill="${farbe}" stroke="${F.krec}" stroke-width="2.2"/>
+    <circle cy="-21" r="3.6" fill="${F.krec}"/></svg>`;
+};
+
+const semseSvg = () => {
   const blaetter = Array.from({ length: 12 }, (_, i) => {
     const a = (i * Math.PI) / 6;
     return `<circle cx="${(26 * Math.cos(a)).toFixed(1)}" cy="${(26 * Math.sin(a)).toFixed(1)}" r="7"/>`;
   }).join('');
-  b.innerHTML = `<svg viewBox="-34 -34 68 68" width="60" height="60" aria-hidden="true">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="-34 -34 68 68">
     <g fill="${F.varak}">${blaetter}<circle r="26"/></g>
-    <circle r="21" fill="${F.krec}"/><circle r="18" fill="none" stroke="${F.cilim}" stroke-width="1"/></svg>
-    <span>${anzahl}</span>`;
-  return b;
+    <circle r="21" fill="${F.krec}"/><circle r="18" fill="none" stroke="${F.cilim}" stroke-width="1"/></svg>`;
+};
+
+async function ladeBilder(map: MLMap) {
+  const auftraege: Promise<void>[] = Object.entries(GRUPPEN).map(async ([id, g]) => {
+    map.addImage(`pin-${id}`, await svgBild(pinSvg(g.farbe)), { pixelRatio: 2 });
+  });
+  auftraege.push(svgBild(pinSvg(F.lapis, true)).then((i) => map.addImage('pin-odabran', i, { pixelRatio: 2 })));
+  auftraege.push(svgBild(semseSvg()).then((i) => map.addImage('semse', i, { pixelRatio: 2 })));
+  await Promise.all(auftraege);
+}
+
+/* ---------- Kompassrose ---------- */
+
+class Kompass implements maplibregl.IControl {
+  private map?: MLMap;
+  private knopf!: HTMLButtonElement;
+  onAdd(map: MLMap) {
+    this.map = map;
+    const box = document.createElement('div');
+    box.className = 'maplibregl-ctrl sp-kompass';
+    this.knopf = document.createElement('button');
+    this.knopf.type = 'button';
+    this.knopf.title = 'Okreni kartu prema sjeveru';
+    this.knopf.setAttribute('aria-label', 'Okreni kartu prema sjeveru');
+    this.knopf.innerHTML = `<svg viewBox="-30 -30 60 60" width="56" height="56" aria-hidden="true">
+      <g fill="${F.varak}"><rect x="-17" y="-17" width="34" height="34"/><rect x="-17" y="-17" width="34" height="34" transform="rotate(45)"/></g>
+      <circle r="15" fill="${F.krec}"/>
+      <path d="M0 -13 L4.5 0 L0 2 L-4.5 0 Z" fill="${F.cilim}"/>
+      <path d="M0 13 L4.5 0 L0 -2 L-4.5 0 Z" fill="${F.kamen}"/>
+      <text y="-19.5" text-anchor="middle" font-family="EB Garamond, serif" font-size="9" font-weight="600" fill="${F.krec}">S</text></svg>`;
+    this.knopf.addEventListener('click', () => map.resetNorthPitch());
+    box.appendChild(this.knopf);
+    map.on('rotate', this.drehen);
+    this.drehen();
+    return box;
+  }
+  private drehen = () => {
+    if (this.map) this.knopf.style.transform = `rotate(${-this.map.getBearing()}deg)`;
+  };
+  onRemove() { this.map?.off('rotate', this.drehen); }
 }
 
 /* ---------- Vorschau-Panel ---------- */
@@ -217,6 +240,7 @@ export async function starteKarte() {
   ]);
   const alle = daten.features as Punkt[];
   const nachId = new Map(alle.map((f) => [f.properties.id, f]));
+  const hatSchrift = Boolean((stil as any).glyphs);
 
   const map = new maplibregl.Map({
     container,
@@ -224,69 +248,77 @@ export async function starteKarte() {
     bounds: [[15.65, 42.5], [19.7, 45.3]],
     fitBoundsOptions: { padding: 30 },
     maxBounds: [[12.5, 41], [22.5, 46.8]],
+    maxPitch: 0,
     attributionControl: { compact: true, customAttribution: 'Obris: Natural Earth' },
-    cooperativeGestures: false,
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+  map.addControl(new Kompass(), 'top-left');
 
-  map.on('load', () => {
+  let ausgewaehlt: string | null = null;
+  const auswahlFilter = () => ['==', ['get', 'id'], ausgewaehlt ?? ''] as any;
+
+  map.on('load', async () => {
     bihEbenen(map);
+    await ladeBilder(map);
     map.addSource('natpisi', { type: 'geojson', data: daten, cluster: true, clusterRadius: 55, clusterMaxZoom: 13 });
-    // unsichtbare Ebene, damit die Kartendaten geladen und abgefragt werden können
-    map.addLayer({ id: 'natpisi-osnova', type: 'circle', source: 'natpisi', paint: { 'circle-radius': 0, 'circle-opacity': 0 } });
+
+    // Gruppen: Şemse-Medaillon mit Anzahl
+    map.addLayer({
+      id: 'natpisi-grupe', type: 'symbol', source: 'natpisi', filter: ['has', 'point_count'],
+      layout: {
+        'icon-image': 'semse', 'icon-allow-overlap': true, 'icon-size': 0.95,
+        ...(hatSchrift ? {
+          'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Bold'],
+          'text-size': 15, 'text-allow-overlap': true,
+        } : {}),
+      },
+      paint: { 'text-color': F.orah },
+    });
+    // Einzelne Inschriften: Spitzbogen in der Farbe der Gruppe
+    map.addLayer({
+      id: 'natpisi-tacke', type: 'symbol', source: 'natpisi', filter: ['!', ['has', 'point_count']],
+      layout: {
+        'icon-image': ['concat', 'pin-', ['get', 'gruppe']], 'icon-anchor': 'bottom',
+        'icon-allow-overlap': true,
+      },
+    });
+    // Ausgewählte Inschrift: größer, in Lapis
+    map.addLayer({
+      id: 'natpisi-odabran', type: 'symbol', source: 'natpisi',
+      filter: ['all', ['!', ['has', 'point_count']], auswahlFilter()],
+      layout: { 'icon-image': 'pin-odabran', 'icon-anchor': 'bottom', 'icon-allow-overlap': true },
+    });
+
+    for (const ebene of ['natpisi-grupe', 'natpisi-tacke', 'natpisi-odabran']) {
+      map.on('mouseenter', ebene, () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', ebene, () => { map.getCanvas().style.cursor = ''; });
+    }
+
+    map.on('click', 'natpisi-grupe', async (e) => {
+      const f = e.features?.[0];
+      if (!f) return;
+      const quelle = map.getSource('natpisi') as GeoJSONSource;
+      const zoom = await quelle.getClusterExpansionZoom(f.properties!.cluster_id);
+      map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom: zoom + 0.3 });
+    });
+
+    map.on('click', 'natpisi-tacke', (e) => {
+      const id = e.features?.[0]?.properties?.id;
+      const punkt = id && nachId.get(id);
+      if (!punkt) return;
+      ausgewaehlt = id;
+      map.setFilter('natpisi-odabran', ['all', ['!', ['has', 'point_count']], auswahlFilter()]);
+      zeigeVorschau(punkt.properties);
+    });
+
     ladeAnzeige?.remove();
   });
-
-  /* Markierungen synchron halten */
-  const markierungen: Record<string, maplibregl.Marker> = {};
-  let sichtbar: Record<string, maplibregl.Marker> = {};
-  let ausgewaehlt: string | null = null;
-
-  function aktualisiere() {
-    const neu: Record<string, maplibregl.Marker> = {};
-    for (const f of map.querySourceFeatures('natpisi')) {
-      const coords = (f.geometry as GeoJSON.Point).coordinates as [number, number];
-      const props = f.properties as any;
-      let schluessel: string;
-      if (props.cluster) {
-        schluessel = `c${props.cluster_id}`;
-        if (!markierungen[schluessel]) {
-          const el = semseElement(props.point_count);
-          el.addEventListener('click', async () => {
-            const quelle = map.getSource('natpisi') as GeoJSONSource;
-            const zoom = await quelle.getClusterExpansionZoom(props.cluster_id);
-            map.easeTo({ center: coords, zoom: zoom + 0.3 });
-          });
-          markierungen[schluessel] = new maplibregl.Marker({ element: el }).setLngLat(coords);
-        }
-      } else {
-        schluessel = `p${props.id}`;
-        if (!markierungen[schluessel]) {
-          const punkt = nachId.get(props.id);
-          if (!punkt) continue;
-          const el = pinElement(punkt.properties);
-          el.addEventListener('click', () => {
-            document.querySelectorAll('.sp-pin.aktiv').forEach((x) => x.classList.remove('aktiv'));
-            el.classList.add('aktiv');
-            ausgewaehlt = punkt.properties.id;
-            zeigeVorschau(punkt.properties);
-          });
-          markierungen[schluessel] = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(coords);
-        }
-      }
-      neu[schluessel] = markierungen[schluessel];
-      if (!sichtbar[schluessel]) markierungen[schluessel].addTo(map);
-    }
-    for (const k in sichtbar) if (!neu[k]) sichtbar[k].remove();
-    sichtbar = neu;
-  }
-  map.on('render', () => { if (map.getSource('natpisi') && map.isSourceLoaded('natpisi')) aktualisiere(); });
 
   /* Vorschau schließen */
   $('p-zatvori').addEventListener('click', () => {
     $('pregled').hidden = true;
-    document.querySelectorAll('.sp-pin.aktiv').forEach((x) => x.classList.remove('aktiv'));
     ausgewaehlt = null;
+    if (map.getLayer('natpisi-odabran')) map.setFilter('natpisi-odabran', ['all', ['!', ['has', 'point_count']], auswahlFilter()]);
   });
 
   /* Filter */
@@ -300,10 +332,6 @@ export async function starteKarte() {
       p.sprachen.some((s) => sprachen.has(s)) &&
       (!q || `${p.titel} ${p.stadt}`.toLocaleLowerCase('bs').includes(q)),
     );
-    // alte Markierungen verwerfen, weil sich die Gruppen ändern
-    for (const k in sichtbar) sichtbar[k].remove();
-    for (const k in markierungen) delete markierungen[k];
-    sichtbar = {};
     (map.getSource('natpisi') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: treffer });
     $('brojac').textContent = String(treffer.length);
     if (ausgewaehlt && !treffer.some((t) => t.properties.id === ausgewaehlt)) $('p-zatvori').click();

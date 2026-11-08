@@ -116,24 +116,12 @@ button, input, select { font: inherit; color: inherit; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-/* ---------- Kartenmarkierungen (werden per Skript erzeugt) ---------- */
-.sp-pin {
-  border: none; background: none; padding: 0; cursor: pointer;
-  filter: drop-shadow(0 2px 2px rgba(30, 25, 21, .25));
-  transition: transform .15s;
+/* ---------- Kartensteuerung ---------- */
+.sp-kompass { background: none !important; box-shadow: none !important; }
+.sp-kompass button {
+  width: 56px; height: 56px; padding: 0; border: none; background: none; cursor: pointer;
+  filter: drop-shadow(0 1px 2px rgba(30, 25, 21, .3)); transition: transform .1s linear;
 }
-.sp-pin:hover { transform: translateY(-2px) scale(1.08); }
-.sp-pin.aktiv svg path { fill: var(--lapis); }
-.sp-pin.aktiv { transform: scale(1.25); }
-.sp-semse {
-  position: relative; width: 60px; height: 60px; border: none; background: none; padding: 0; cursor: pointer;
-  filter: drop-shadow(0 2px 3px rgba(30, 25, 21, .25));
-}
-.sp-semse span {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--f-titel); font-weight: 600; font-size: 20px; color: var(--murekkep);
-}
-.sp-semse:hover { transform: scale(1.06); }
 .maplibregl-ctrl-attrib { font-family: var(--f-text); font-size: 12px; }
 .maplibregl-ctrl-group { border-radius: 0 !important; border: 1px solid var(--varak); box-shadow: none !important; }
 .maplibregl-ctrl-group button { width: 40px; height: 40px; }
