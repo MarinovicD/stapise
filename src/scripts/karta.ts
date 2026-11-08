@@ -239,6 +239,7 @@ function zeigeVorschau(p: Eigenschaften) {
   if (p.foto) { img.src = p.foto; img.alt = p.fotoAlt; img.hidden = false; leer.hidden = true; }
   else { img.removeAttribute('src'); img.hidden = true; leer.hidden = false; }
   panel.hidden = false;
+  (window as any).stapisePretvori?.(panel); // Arebica, falls gewählt
 }
 
 /* ---------- Start ---------- */

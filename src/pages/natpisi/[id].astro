@@ -43,7 +43,7 @@ const metadaten: [string, string | undefined, boolean?][] = [
   ['Vakif / naručilac', d.stifter],
   ['Kaligraf', d.kalligraph],
   ['Stanje', d.zustand],
-  ['Zabilježeno', d.erfasst.toLocaleDateString('bs-BA')],
+  ['Zabilježeno', d.erfasst.toISOString().slice(0, 10)],
 ];
 const naslov = d.titel.bs;
 ---
@@ -101,7 +101,7 @@ const naslov = d.titel.bs;
       <article class="levha">
         <div class="oznake">
           <span class="oznaka" style={`background:${gruppe.text}`}>{ART_LABEL[d.art]}</span>
-          <span class="label">{d.inventarnummer}</span>
+          <span class="label latinica">{d.inventarnummer}</span>
         </div>
         <h1>{naslov}</h1>
         <p class="mjesto">{d.ort.stadt} · <span class="datum">{datum}</span></p>
@@ -116,7 +116,7 @@ const naslov = d.titel.bs;
         <section class="transliteracija" aria-labelledby="tl-naslov">
           <h2 id="tl-naslov" class="label">Transliteracija</h2>
           <ol>
-            {d.zeilen.map((z, i) => <li data-zeile={i + 1}><i>{z.transliteration}</i></li>)}
+            {d.zeilen.map((z, i) => <li data-zeile={i + 1} lang="ota-Latn"><i>{z.transliteration}</i></li>)}
           </ol>
         </section>
 
@@ -124,7 +124,7 @@ const naslov = d.titel.bs;
           <h2 id="pr-naslov" class="sr-only">Prijevod</h2>
           <div class="kartice" role="tablist" aria-label="Jezik prijevoda">
             {sprachenVorhanden.map((s, i) => (
-              <button type="button" role="tab" data-jezik={s.code} aria-selected={i === 0 ? 'true' : 'false'}>{s.label}</button>
+              <button type="button" role="tab" lang={s.code} data-jezik={s.code} aria-selected={i === 0 ? 'true' : 'false'}>{s.label}</button>
             ))}
           </div>
           <ol>
@@ -162,7 +162,7 @@ const naslov = d.titel.bs;
 
         <div class="citiranje">
           <div class="label">Citiranje</div>
-          <p>{SEITE.name}, natpis {d.inventarnummer}, „{naslov}“, {d.ort.stadt}. URL: <a href={permalink}>{permalink}</a></p>
+          <p>{SEITE.name}, natpis <span class="latinica">{d.inventarnummer}</span>, „{naslov}“, {d.ort.stadt}. URL: <a class="latinica" href={permalink}>{permalink}</a></p>
         </div>
       </article>
     </div>
@@ -227,7 +227,7 @@ const naslov = d.titel.bs;
   .transliteracija h2, .komentar h2, .literatura h2 { margin-bottom: 8px; }
   ol { margin: 0; padding: 0; list-style: none; counter-reset: z; display: flex; flex-direction: column; gap: 6px; }
   ol li { counter-increment: z; display: flex; gap: 14px; padding: 2px 6px; border-radius: 2px; transition: background .2s; }
-  ol li::before { content: counter(z); width: 22px; flex-shrink: 0; text-align: right; font-family: var(--f-titel); font-size: 20px; color: var(--cilim); }
+  ol li::before { content: counter(z); width: 22px; flex-shrink: 0; text-align: end; font-family: var(--f-titel); font-size: 20px; color: var(--cilim); }
   ol li.aktiv { background: #EFE2C2; }
   .transliteracija li { font-size: 22px; color: var(--lapis); }
   .prijevod li { font-size: 20px; }
@@ -254,7 +254,7 @@ const naslov = d.titel.bs;
   .podaci dt { font-size: 12px; }
   .podaci dd { margin: 2px 0 0; font-size: 18px; }
 
-  .literatura ul { margin: 0; padding-left: 20px; }
+  .literatura ul { margin: 0; padding-inline-start: 20px; }
   .citiranje { padding: 16px 20px; background: var(--ahar-hell); border: 1px solid var(--kamen-hell); }
   .citiranje p { margin: 4px 0 0; font-size: 16px; overflow-wrap: anywhere; }
 

@@ -5,10 +5,12 @@ import '@fontsource/eb-garamond/500.css';
 import '@fontsource/eb-garamond/500-italic.css';
 import '@fontsource/eb-garamond/600.css';
 import '@fontsource/amiri/arabic-400.css';
+import '@fontsource/amiri/arabic-700.css';
 import '@fontsource/noto-nastaliq-urdu/arabic-400.css';
 import '../styles/global.css';
 import Ebru from '../components/Ebru.astro';
 import { SEITE, url } from '../lib/konstanten';
+import { uArebicu } from '../lib/arebica';
 
 interface Props {
   titel?: string;
@@ -36,6 +38,15 @@ const nav = [
     <meta property="og:description" content={beschreibung} />
     <link rel="icon" href={url('favicon.svg')} type="image/svg+xml" />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <script is:inline>
+      // Schrift sofort setzen, damit die Seite nicht kurz in der falschen Schrift aufblitzt
+      try {
+        if (localStorage.getItem('stapise-pismo') === 'arebica') {
+          const h = document.documentElement;
+          h.dataset.pismo = 'arebica'; h.dir = 'rtl'; h.classList.add('pismo-ceka');
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body class:list={{ vollbild }}>
     <a class="sr-only" href="#sadrzaj">Preskoči na sadržaj</a>
@@ -45,6 +56,10 @@ const nav = [
         <span class="logo-name">{SEITE.name}</span>
         <span class="talik logo-ornament" aria-hidden="true">{SEITE.ornament}</span>
       </a>
+      <div class="pismo" role="group" aria-label="Pismo">
+        <button type="button" data-pismo-izbor="latinica" aria-pressed="true">Latinica</button>
+        <button type="button" data-pismo-izbor="arebica" aria-pressed="false" lang="bs-Arab">{uArebicu('Arebica')}</button>
+      </div>
       <nav aria-label="Glavna navigacija">
         {nav.map((n) => (
           <a href={n.href} aria-current={aktiv === n.id ? 'page' : undefined}>{n.label}</a>
@@ -55,6 +70,11 @@ const nav = [
     <main id="sadrzaj">
       <slot />
     </main>
+
+    <script>
+      import { startePismo } from '../scripts/pismo';
+      startePismo();
+    </script>
 
     {!vollbild && (
       <footer class="fuss">
@@ -88,6 +108,13 @@ const nav = [
   .logo-name { font-family: var(--f-titel); font-size: 30px; font-weight: 600; }
   .logo-ornament { font-size: 19px; color: var(--varak); line-height: 1.6; }
   .kopf nav { display: flex; gap: 8px 30px; flex-wrap: wrap; }
+  .pismo { display: flex; border: 1px solid var(--varak); margin-inline-start: auto; }
+  .pismo button {
+    min-height: 36px; padding: 0 12px; border: none; background: none; cursor: pointer;
+    font-family: var(--f-text); font-size: 15px; color: var(--text-3);
+  }
+  .pismo button[lang='bs-Arab'] { font-family: var(--f-nesih); font-size: 18px; }
+  .pismo button[aria-pressed='true'] { background: var(--lapis); color: var(--krec); }
   .kopf nav a {
     color: var(--murekkep); text-decoration: none; font-size: 18px;
     padding: 10px 0 6px; border-bottom: 2px solid transparent;

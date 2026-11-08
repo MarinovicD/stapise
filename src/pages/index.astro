@@ -76,7 +76,7 @@ const datenUrl = url('data/natpisi.json');
 
   .filter {
     width: 300px; flex-shrink: 0; overflow-y: auto;
-    background: var(--ahar); border-right: 1px solid var(--varak);
+    background: var(--ahar); border-inline-end: 1px solid var(--varak);
     padding: 24px 26px; display: flex; flex-direction: column; gap: 22px;
   }
   .feld { display: flex; flex-direction: column; gap: 8px; }
@@ -96,7 +96,7 @@ const datenUrl = url('data/natpisi.json');
 
   .pregled {
     width: 380px; flex-shrink: 0; overflow-y: auto;
-    background: var(--ahar-hell); border-left: 1px solid var(--varak);
+    background: var(--ahar-hell); border-inline-start: 1px solid var(--varak);
     padding: 22px 26px; display: flex; flex-direction: column; gap: 14px;
   }
   .pregled[hidden] { display: none; }
@@ -119,14 +119,14 @@ const datenUrl = url('data/natpisi.json');
   /* Handy und Tablet: Filter oben, Vorschau als Blatt von unten */
   @media (max-width: 900px) {
     .karta-seite { flex-direction: column; }
-    .filter { width: auto; max-height: none; flex-direction: row; flex-wrap: wrap; gap: 10px 22px; padding: 12px var(--rand); border-right: none; border-bottom: 1px solid var(--varak); }
+    .filter { width: auto; max-height: none; flex-direction: row; flex-wrap: wrap; gap: 10px 22px; padding: 12px var(--rand); border-inline-end: none; border-bottom: 1px solid var(--varak); }
     .filter fieldset { display: none; }
     .feld { flex: 1; min-width: 200px; flex-direction: row; align-items: center; }
     .feld .label { display: none; }
     .brojac { margin: 0; align-self: center; }
     .pregled {
       position: absolute; left: 0; right: 0; bottom: 0; width: auto; max-height: 70%;
-      border-left: none; border-top: 2px solid var(--varak); z-index: 10; box-shadow: 0 -8px 24px rgba(30,25,21,.15);
+      border-inline-start: none; border-top: 2px solid var(--varak); z-index: 10; box-shadow: 0 -8px 24px rgba(30,25,21,.15);
     }
     .pregled-foto { height: 160px; }
   }

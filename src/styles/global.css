@@ -125,3 +125,16 @@ button, input, select { font: inherit; color: inherit; }
 .maplibregl-ctrl-attrib { font-family: var(--f-text); font-size: 12px; }
 .maplibregl-ctrl-group { border-radius: 0 !important; border: 1px solid var(--varak); box-shadow: none !important; }
 .maplibregl-ctrl-group button { width: 40px; height: 40px; }
+
+/* ---------- Arebica ---------- */
+html.pismo-ceka body > * { visibility: hidden; }
+html[data-pismo='arebica'] body { font-family: var(--f-nesih); font-size: 20px; line-height: 1.75; }
+html[data-pismo='arebica'] h1,
+html[data-pismo='arebica'] h2,
+html[data-pismo='arebica'] h3 { font-family: var(--f-nesih); font-weight: 700; line-height: 1.5; }
+html[data-pismo='arebica'] .label { letter-spacing: 0; text-transform: none; font-size: 15px; }
+/* Fremdsprachen und Lateinschrift bleiben links-nach-rechts in der Lateinschrift */
+html[data-pismo='arebica'] :is([lang='de'], [lang='en'], [lang='tr'], [lang='ota-Latn'], .latinica) {
+  font-family: var(--f-text); direction: ltr; unicode-bidi: isolate;
+}
+html[data-pismo='arebica'] input { direction: ltr; font-family: var(--f-text); }
